@@ -1,0 +1,211 @@
+extends layout
+
+block content
+  .auth-container
+    .auth-card
+      h2.auth-title Create Your CraftSmart Account
+
+      if error
+        .alert.alert-error= error
+
+      form.auth-form(action="/register", method="POST")
+        .form-row
+          .form-col
+            label(for="name") Full Name
+            input.form-control(type="text", id="name", name="name", required, placeholder="Enter your full name")
+
+          .form-col
+            label(for="email") Email Address
+            input.form-control(type="email", id="email", name="email", required, placeholder="Enter your email")
+
+        .form-row
+          .form-col
+            label(for="mobile") Mobile Number
+            input.form-control(type="tel", id="mobile", name="mobile", required, placeholder="Enter your mobile number")
+
+          .form-col
+            label(for="password") Password
+            input.form-control(type="password", id="password", name="password", required, placeholder="Choose a secure password")
+
+        .form-group
+          label(for="role") I am a:
+          select.form-control(id="role", name="role", required onchange="toggleRoleFields()")
+            option(value="") Select your role
+            option(value="employer") Employer (Looking to hire)
+            option(value="craftsman") Craftsman (Looking for work)
+
+        //- LOCATION SECTION (applies to both)
+        .location-section
+          .form-row
+            .form-col
+              label(for='region' class='block mb-1 font-semibold') Region
+              select#region(name='region', required onchange='populateDistricts()', class='form-control')
+                option(value='') Select Region
+                option(value='Central') Central
+                option(value='Eastern') Eastern
+                option(value='Northern') Northern
+                option(value='Western') Western
+
+            .form-col
+              label(for='district' class='block mb-1 font-semibold') District
+              select#district(name='district', required onchange='populateCities()', class='form-control')
+                option(value='') Select District
+
+          .form-group
+            label(for='city' class='block mb-1 font-semibold') City / Neighborhood
+            select#city(name='city', required class='form-control')
+              option(value='') Select City / Neighborhood
+
+        //- EMPLOYER FIELDS
+        .employer-fields.hidden
+          .form-group
+            label(for="company" class="block mb-1 font-semibold") Company Name
+            input(type="text", name="company", placeholder="Your company name", class="form-control")
+
+          .form-group
+            label(for="position" class="block mb-1 font-semibold") Position/Title
+            input(type="text", name="position", placeholder="Your title", class="form-control")
+
+          .form-group
+            label(for="industry" class="block mb-1 font-semibold") Industry
+            input(type="text", name="industry", placeholder="Construction, Design, etc.", class="form-control")
+
+        //- CRAFTSMAN FIELDS
+        .craftsman-fields.hidden
+          .form-group
+            label(for='skills' class='block mb-1 font-semibold') Skills (comma-separated)
+            input#skills(type='text', name='skills', placeholder='e.g. plumbing, carpentry', class='form-control')
+
+          .form-group
+            label(for='bio' class='block mb-1 font-semibold') Bio
+            textarea#bio(name='bio', rows='7', class='form-control')
+              | Born: _______________
+              | 
+              | Gender: _______________
+              | 
+              | Languages: _______________
+              | 
+              | Years of Experience: _______________
+              | 
+              | About me: I am a highly skilled _______________ with over __ years of hands-on experience. 
+              | I have worked on various projects including _______________. I take pride in delivering 
+              | quality work and maintaining good communication with clients.
+
+        button.btn-submit(type="submit") Create Account
+
+      .mt-6.text-center
+        a(href='/' class='text-blue-600 hover:underline') ← Back to Home
+
+    //- JavaScript
+    script.
+      const districts = {
+        Central: {
+          Kampala: ["Muyenga", "Lweza", "Kabalagala", "Munyonyo", "Ntinda", "Naguru", "Buziga", "Bugolobi", "Makindye", "Kololo", "Kansanga", "Kyambogo", "Rubaga", "Nakawa", "Bukoto", "Kamwokya", "Nsambya", "Bweyogerere", "Namugongo", "Kasubi", "Mutungo", "Kireka", "Mengo", "Kikoni"],
+          Wakiso: ["Entebbe", "Kira", "Nansana", "Kasangati", "Gayaza", "Bulenga"],
+          Mukono: ["Mukono Town", "Seeta", "Namilyango"]
+        },
+        Eastern: {
+          Jinja: ["Bugembe", "Mpumudde", "Wanyange"],
+          Mbale: ["Industrial", "Wanale", "Namakwekwe"],
+          Tororo: ["Malaba", "Mukuju"]
+        },
+        Northern: {
+          Gulu: ["Pece", "Layibi"],
+          Lira: ["Ojwina", "Adyel"],
+          Arua: ["River Oli", "Adumi"]
+        },
+        Western: {
+          Mbarara: ["Kamukuzi", "Kakoba"],
+          Kabale: ["Central", "Kigongi"],
+          FortPortal: ["East Division", "West Division"]
+        }
+      };
+
+      function populateDistricts() {
+        const region = document.getElementById("region").value;
+        const districtSelect = document.getElementById("district");
+        const citySelect = document.getElementById("city");
+        districtSelect.innerHTML = '<option value="">Select District</option>';
+        citySelect.innerHTML = '<option value="">Select City / Neighborhood</option>';
+        if (region && districts[region]) {
+          Object.keys(districts[region]).forEach(district => {
+            const option = document.createElement("option");
+            option.value = district;
+            option.text = district;
+            districtSelect.appendChild(option);
+          });
+        }
+      }
+
+      function populateCities() {
+        const region = document.getElementById("region").value;
+        const district = document.getElementById("district").value;
+        const citySelect = document.getElementById("city");
+        citySelect.innerHTML = '<option value="">Select City / Neighborhood</option>';
+        if (region && district && districts[region][district]) {
+          districts[region][district].forEach(city => {
+            const option = document.createElement("option");
+            option.value = city;
+            option.text = city;
+            citySelect.appendChild(option);
+          });
+        }
+      }
+
+      function toggleRoleFields() {
+        const role = document.getElementById("role").value;
+        document.querySelector(".employer-fields").classList.add("hidden");
+        document.querySelector(".craftsman-fields").classList.add("hidden");
+
+        if (role === "employer") {
+          document.querySelector(".employer-fields").classList.remove("hidden");
+        } else if (role === "craftsman") {
+          document.querySelector(".craftsman-fields").classList.remove("hidden");
+        }
+      }
+
+    //- CSS for basic layout
+    style.
+      .auth-card {
+        max-width: 750px;
+        margin: auto;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      .form-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .form-col {
+        flex: 1 1 48%;
+        min-width: 250px;
+        margin-bottom: 1rem;
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      .form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .btn-submit {
+        width: 100%;
+        background: #444A6D;
+        color: white;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background 0.3s ease;
+      }
+      .btn-submit:hover {
+        background: #1e40af;
+      }
+      .hidden {
+        display: none;
+      }

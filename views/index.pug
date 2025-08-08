@@ -1,0 +1,42 @@
+extends layout
+
+block content
+  .hero
+    .container
+      .hero-content
+        h1.hero-title Welcome to CraftSmart
+        p.hero-subtitle Connect skilled craftsmen with employers for quality home improvement projects
+        .hero-actions
+          a.btn.btn-primary(href="/register") Get Started
+          a.btn.btn-secondary(href="/login") Sign In
+        
+  .features
+    .container
+      h2.section-title Why Choose CraftSmart?
+      .features-grid
+        .feature-card
+          .feature-icon
+            i.fa-solid.fa-wrench
+          h3 Skilled Craftsmen
+          p Verified professionals with proven track records
+        .feature-card
+          .feature-icon
+            i.fa-solid.fa-briefcase
+          h3 Quality Jobs
+          p Find meaningful projects that match your expertise
+        .feature-card
+          .feature-icon
+            i.fa-solid.fa-star
+          h3 Trusted Reviews
+          p Transparent rating system for peace of mind
+        .feature-card
+          .feature-icon
+            i.fa-solid.fa-shield-halved
+          h3 Secure Platform
+          p Safe payments and protected user information
+
+  .cta-section
+    .container
+      h2 Ready to Start Your Next Project?
+      p Join thousands of satisfied customers and craftsmen
+      a.btn.btn-primary(href="/register") Join CraftSmart Today

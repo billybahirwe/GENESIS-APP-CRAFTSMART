@@ -1,0 +1,52 @@
+extends ../layout
+
+block content
+  .container
+    .dashboard-header
+      h1.dashboard-title Welcome back, #{user.name}
+      p.dashboard-subtitle Manage your projects and find skilled craftsmen
+    
+    .dashboard-stats
+      .stat-card
+        .stat-icon 📋
+        .stat-info
+          .stat-number= jobs.length
+          .stat-label Active Jobs
+      .stat-card
+        .stat-icon 👨‍🔧
+        .stat-info
+          .stat-number= craftsmen.length
+          .stat-label Available Craftsmen
+      .stat-card
+        .stat-icon 💰
+        .stat-info
+          .stat-number $#{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString()}
+          .stat-label Total Budget
+    
+    .dashboard-actions
+      a.btn.btn-primary(href="/employer/post-job") Post New Job
+      a.btn.btn-secondary(href="/employer/browse-craftsmen") Browse Craftsmen
+    
+    .dashboard-section
+      h2 Your Recent Jobs
+      if jobs.length > 0
+        .jobs-grid
+          each job in jobs
+            .job-card
+              h3.job-title= job.title
+              p.job-description= job.description
+              .job-meta
+                span.job-location 📍 #{job.location}
+                span.job-budget 💰 $#{job.budget.toLocaleString()}
+                span.job-status(class=`status-${job.status}`)= job.status
+              .job-actions
+                if job.status === 'open'
+                  button.btn.btn-sm.btn-secondary View Applications
+                else if job.status === 'in-progress'
+                  button.btn.btn-sm.btn-primary Contact Craftsman
+      else
+        .empty-state
+          .empty-icon 📋
+          h3 No Jobs Posted Yet
+          p Start by posting your first job to connect with skilled craftsmen
+          a.btn.btn-primary(href="/employer/post-job") Post Your First Job

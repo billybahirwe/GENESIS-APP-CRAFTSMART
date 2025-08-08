@@ -1,0 +1,47 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Post a New Job
+      p.page-subtitle Describe your project to attract the right craftsmen
+    
+    .form-container
+      form.job-form(action="/employer/post-job", method="POST", enctype="multipart/form-data")
+        .form-group
+          label(for="title") Job Title
+          input.form-control(type="text", id="title", name="title", required, placeholder="e.g., Bathroom Renovation")
+        
+        .form-group
+          label(for="category") Category
+          select.form-control(id="category", name="category", required)
+            option(value="") Select category
+            option(value="Plumbing") Plumbing
+            option(value="Electrical") Electrical
+            option(value="Carpentry") Carpentry
+            option(value="Painting") Painting
+            option(value="Roofing") Roofing
+            option(value="Flooring") Flooring
+            option(value="HVAC") HVAC
+            option(value="General") General Maintenance
+        
+        .form-group
+          label(for="description") Job Description
+          textarea.form-control(id="description", name="description", rows="5", required, placeholder="Provide detailed information about your project...")
+        
+        .form-group
+          label(for="location") Location
+          input.form-control(type="text", id="location", name="location", required, placeholder="City, State")
+        
+        .form-group
+          label(for="budget") Budget ($)
+          input.form-control(type="number", id="budget", name="budget", required, min="0", step="0.01", placeholder="0.00")
+        
+        .form-group
+          label(for="images") Project Images (Optional)
+          input.form-control(type="file", id="images", name="images", multiple, accept="image/*")
+          small.form-text Upload up to 5 images to help craftsmen understand your project
+        
+        .form-actions
+          button.btn.btn-primary(type="submit") Post Job
+          a.btn.btn-secondary(href="/employer/dashboard") Cancel

@@ -1,0 +1,114 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title My Profile
+      p.page-subtitle Manage your professional information
+    
+    .profile-container
+      .profile-form-section
+        form.profile-form(action="/craftsman/profile", method="POST")
+          .form-row
+            .form-group
+              label(for="name") Full Name
+              input.form-control(type="text", id="name", name="name", value=user.name, required)
+            .form-group
+              label(for="email") Email
+              input.form-control(type="email", id="email", name="email", value=user.email, required)
+          
+          .form-row
+            .form-group
+              label(for="location") Location
+              input.form-control(type="text", id="location", name="location", value=user.location, required)
+            .form-group
+              label(for="experience") Years of Experience
+              input.form-control(type="number", id="experience", name="experience", value=user.experience, min="0", required)
+          
+          .form-group
+            label(for="skills") Skills (comma-separated)
+            input.form-control(type="text", id="skills", name="skills", value=user.skills ? user.skills.join(', ') : '', placeholder="e.g., Plumbing, Electrical, Carpentry")
+          
+          .form-actions
+            button.btn.btn-primary(type="submit") Update Profile
+            if !user.approved
+              p.form-note Profile changes require admin approval
+      
+      .profile-chart-section
+        .chart-container
+          h3 Skill Assessment
+          .chart-wrapper
+            canvas(id="skillChart", width="400", height="400")
+          .chart-legend
+            .legend-item
+              .legend-color.legend-user
+              span Your Skills
+            .legend-item
+              .legend-color.legend-platform
+              span Platform Average
+
+block scripts
+  script.
+    // Radar Chart Configuration
+    const ctx = document.getElementById('skillChart').getContext('2d');
+    
+    const userSkills = !{JSON.stringify(user.profile)};
+    const platformAverage = !{JSON.stringify(platformAverage)};
+    
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'],
+        datasets: [{
+          label: 'Your Skills',
+          data: [
+            userSkills.communication,
+            userSkills.technicalSkill,
+            userSkills.punctuality,
+            userSkills.quality,
+            userSkills.safety
+          ],
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          borderColor: 'rgba(37, 99, 235, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(37, 99, 235, 1)'
+        }, {
+          label: 'Platform Average',
+          data: [
+            platformAverage.communication,
+            platformAverage.technicalSkill,
+            platformAverage.punctuality,
+            platformAverage.quality,
+            platformAverage.safety
+          ],
+          backgroundColor: 'rgba(156, 163, 175, 0.2)',
+          borderColor: 'rgba(156, 163, 175, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(156, 163, 175, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(156, 163, 175, 1)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              stepSize: 20
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });

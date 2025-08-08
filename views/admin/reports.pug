@@ -1,0 +1,22 @@
+extends ../layout
+
+block content
+  .container
+    h1.my-4 Admin Reports
+    
+    .card.mb-4
+      .card-header User Report
+      .card-body
+        p Total Employers: #[strong= employerCount]
+        p Total Craftsmen: #[strong= craftsmanCount]
+        
+    .card
+      .card-header Job Report
+      .card-body
+        if jobsByStatus && jobsByStatus.length
+          ul.list-group
+            each job in jobsByStatus
+              li.list-group-item
+                | #{job._id}: #[strong= job.count]
+        else
+          p No job data available.

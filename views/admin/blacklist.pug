@@ -1,0 +1,71 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Blacklist Management
+      p.page-subtitle Manage banned users and add new entries
+    
+    .blacklist-actions
+      button.btn.btn-primary(onclick="toggleAddForm()") Add to Blacklist
+    
+    .add-form-container(id="add-form", style="display: none;")
+      .form-card
+        h3 Add User to Blacklist
+        form.blacklist-form(action="/admin/blacklist", method="POST")
+          .form-group
+            label(for="name") Name
+            input.form-control(type="text", id="name", name="name", required)
+          .form-group
+            label(for="mobile") Mobile Number
+            input.form-control(type="tel", id="mobile", name="mobile", required)
+          .form-group
+            label(for="reason") Reason for Blacklisting
+            textarea.form-control(id="reason", name="reason", rows="3", required, placeholder="Describe the reason for blacklisting this user...")
+          .form-actions
+            button.btn.btn-danger(type="submit") Add to Blacklist
+            button.btn.btn-secondary(type="button", onclick="toggleAddForm()") Cancel
+    
+    .blacklist-container
+      if blacklist.length > 0
+        .blacklist-grid
+          each entry in blacklist
+            .blacklist-card
+              .blacklist-info
+                h3.blacklist-name= entry.name
+                p.blacklist-mobile Mobile: #{entry.mobile}
+                p.blacklist-reason= entry.reason
+                .blacklist-meta
+                  span.blacklist-date Added: #{entry.addedAt.toLocaleDateString()}
+              .blacklist-actions
+                button.btn.btn-danger.btn-sm(onclick=`removeFromBlacklist(${entry.id})`) Remove
+      else
+        .empty-state
+          .empty-icon 🎉
+          h3 No Blacklisted Users
+          p The platform is currently free of banned users.
+
+block scripts
+  script.
+    function toggleAddForm() {
+      const form = document.getElementById('add-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    async function removeFromBlacklist(id) {
+      if (confirm('Are you sure you want to remove this user from the blacklist?')) {
+        try {
+          const response = await fetch(`/admin/blacklist/${id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            location.reload();
+          } else {
+            alert('Error removing user from blacklist');
+          }
+        } catch (error) {
+          alert('Error removing user from blacklist');
+        }
+      }
+    }

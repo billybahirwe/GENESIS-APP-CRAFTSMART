@@ -1,0 +1,68 @@
+extends ../layout
+
+block content
+  .container
+    .dashboard-header
+      h1.dashboard-title Welcome back, #{user.name}
+      if !user.approved
+        .alert.alert-warning
+          strong Profile Pending Approval
+          p Your profile is under review. You'll be notified once approved.
+      else
+        p.dashboard-subtitle Find your next project and grow your business
+    
+    .dashboard-stats
+      .stat-card
+        .stat-icon 📋
+        .stat-info
+          .stat-number= availableJobs.length
+          .stat-label Available Jobs
+      .stat-card
+        .stat-icon 🔨
+        .stat-info
+          .stat-number= myJobs.length
+          .stat-label My Jobs
+      .stat-card
+        .stat-icon ⭐
+        .stat-info
+          .stat-number= user.rating || 'New'
+          .stat-label Rating
+    
+    if user.approved
+      .dashboard-section
+        h2 Available Jobs
+        if availableJobs.length > 0
+          .jobs-grid
+            each job in availableJobs
+              .job-card
+                h3.job-title= job.title
+                p.job-description= job.description
+                .job-meta
+                  span.job-location 📍 #{job.location}
+                  span.job-budget 💰 $#{job.budget.toLocaleString()}
+                  span.job-category 🏷️ #{job.category}
+                .job-actions
+                  form.inline-form(action=`/craftsman/accept-job/${job.id}`, method="POST")
+                    button.btn.btn-primary.btn-sm(type="submit") Apply for Job
+                  button.btn.btn-secondary.btn-sm View Details
+        else
+          .empty-state
+            .empty-icon 📋
+            h3 No Available Jobs
+            p Check back later for new opportunities
+    
+    if myJobs.length > 0
+      .dashboard-section
+        h2 My Active Jobs
+        .jobs-grid
+          each job in myJobs
+            .job-card
+              h3.job-title= job.title
+              p.job-description= job.description
+              .job-meta
+                span.job-location 📍 #{job.location}
+                span.job-budget 💰 $#{job.budget.toLocaleString()}
+                span.job-status(class=`status-${job.status}`)= job.status
+              .job-actions
+                button.btn.btn-primary.btn-sm Contact Employer
+                button.btn.btn-secondary.btn-sm Update Status

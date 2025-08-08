@@ -1,0 +1,132 @@
+extends layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Messages
+      p.page-subtitle Communicate with other users
+    
+    .messages-container
+      .messages-sidebar
+        .conversations-list
+          if allUsers && allUsers.length > 0
+            each otherUser, index in allUsers
+              .conversation-item(class=(index === 0 ? 'active' : '') data-user-id=otherUser._id data-user-name=otherUser.name)
+                .conversation-avatar
+                  span= otherUser.name.charAt(0)
+                .conversation-info
+                  h4= otherUser.name
+                  p Latest message preview...
+                  span.time ...
+          else
+            .empty-sidebar No other users available.
+      
+      .messages-main
+        .messages-header
+          .chat-user-info
+            .chat-avatar
+              span#chat-avatar-letter J
+            .chat-details
+              h3#chat-user-name John Employer
+              span.status Online
+        
+        .messages-content
+          if messages && messages.length > 0
+            each message in messages
+              .message(class=(message.senderId.toString() === user._id.toString() ? 'message-sent' : 'message-received'))
+                .message-content
+                  p= message.content
+                  span.message-time= message.timestamp.toLocaleString()
+
+        .message-input-container
+          .message-input-wrapper
+            input.message-input(type="text", placeholder="Type your message...", id="message-input")
+            button.send-button(type="button", id="send-button") Send
+            
+    .empty-state(style="display: none;")
+      .empty-icon 💬
+      h3 No Messages Yet
+      p Start a conversation with employers or craftsmen
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', () => {
+      const sendButton = document.getElementById('send-button');
+      const messageInput = document.getElementById('message-input');
+      const messagesContent = document.querySelector('.messages-content');
+      const chatUserName = document.getElementById('chat-user-name');
+      const chatUserAvatar = document.getElementById('chat-avatar-letter');
+      const conversationsList = document.querySelector('.conversations-list');
+      const conversations = conversationsList.querySelectorAll('.conversation-item');
+      
+      if (conversations.length > 0) {
+        conversations[0].classList.add('active');
+        const initialUser = conversations[0].dataset.userName;
+        chatUserName.textContent = initialUser;
+        chatUserAvatar.textContent = initialUser.charAt(0);
+      }
+
+      conversations.forEach(item => {
+        item.addEventListener('click', () => {
+          conversations.forEach(conv => conv.classList.remove('active'));
+          item.classList.add('active');
+          const userName = item.dataset.userName;
+          chatUserName.textContent = userName;
+          chatUserAvatar.textContent = userName.charAt(0);
+          messagesContent.innerHTML = ''; 
+        });
+      });
+
+      sendButton.addEventListener('click', sendMessage);
+      messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          sendMessage();
+        }
+      });
+
+      async function sendMessage() {
+        const content = messageInput.value.trim();
+        const activeConversation = document.querySelector('.conversation-item.active');
+        
+        if (!activeConversation) {
+          alert('Please select a user to send a message to.');
+          return;
+        }
+
+        const receiverId = activeConversation.dataset.userId;
+
+        if (content === '') {
+          return;
+        }
+
+        try {
+          const response = await fetch('/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ receiverId, content })
+          });
+
+          if (response.ok) {
+            const newMessageDiv = document.createElement('div');
+            newMessageDiv.className = 'message message-sent';
+            newMessageDiv.innerHTML = `
+              <div class="message-content">
+                <p>${content}</p>
+                <span class="message-time">Just now</span>
+              </div>
+            `;
+            messagesContent.appendChild(newMessageDiv);
+            messageInput.value = '';
+            messagesContent.scrollTop = messagesContent.scrollHeight;
+          } else {
+            console.error('Failed to send message.');
+            alert('Failed to send message.');
+          }
+        } catch (error) {
+          console.error('Error sending message:', error);
+          alert('An error occurred while sending the message.');
+        }
+      }
+    });

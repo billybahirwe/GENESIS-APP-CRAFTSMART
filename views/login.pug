@@ -1,0 +1,19 @@
+extends layout
+
+block content
+  .auth-container
+    .auth-card
+      h2.auth-title Sign In to CraftSmart
+      if error
+        .alert.alert-error= error
+      form.auth-form(action="/login", method="POST")
+        .form-group
+          label(for="mobile") Mobile Number
+          input.form-control(type="tel", id="mobile", name="mobile", required, placeholder="Enter your mobile number")
+        .form-group
+          label(for="password") Password
+          input.form-control(type="password", id="password", name="password", required, placeholder="Enter your password")
+        button.btn.btn-primary.btn-full(type="submit") Sign In
+      .auth-footer
+        p Don't have an account? 
+          a(href="/register") Sign up here

@@ -1,0 +1,80 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Browse Craftsmen
+      p.page-subtitle Find the perfect craftsman for your project
+    
+    .filters-section
+      .filters-form
+        .filter-group
+          label(for="skill-filter") Filter by Skill
+          select.form-control(id="skill-filter", onchange="filterCraftsmen()")
+            option(value="") All Skills
+            option(value="Plumbing") Plumbing
+            option(value="Electrical") Electrical
+            option(value="Carpentry") Carpentry
+            option(value="Painting") Painting
+        .filter-group
+          label(for="rating-filter") Minimum Rating
+          select.form-control(id="rating-filter", onchange="filterCraftsmen()")
+            option(value="") Any Rating
+            option(value="4") 4+ Stars
+            option(value="3") 3+ Stars
+        .filter-group
+          label(for="location-filter") Location
+          input.form-control(type="text", id="location-filter", placeholder="Enter location", oninput="filterCraftsmen()")
+    
+    .craftsmen-grid(id="craftsmen-grid")
+      each craftsman in craftsmen
+        .craftsman-card(data-skills=craftsman.skills && craftsman.skills.length ? craftsman.skills.join(',') : '', data-rating=craftsman.rating, data-location=craftsman.location)
+          .craftsman-header
+            .craftsman-avatar
+              span= craftsman.name.charAt(0)
+            .craftsman-info
+              h3.craftsman-name= craftsman.name
+              .craftsman-rating
+                span.stars ⭐ #{craftsman.rating || 'New'}
+              p.craftsman-location 📍 #{craftsman.location}
+          .craftsman-skills
+            if craftsman.skills && craftsman.skills.length
+              each skill in craftsman.skills
+                span.skill-tag= skill
+          .craftsman-meta
+            p.craftsman-experience #{craftsman.experience} years experience
+          .craftsman-actions
+            button.btn.btn-primary.btn-sm Contact
+            button.btn.btn-secondary.btn-sm View Profile
+
+block scripts
+  script.
+    function filterCraftsmen() {
+      const skillFilter = document.getElementById('skill-filter').value;
+      const ratingFilter = document.getElementById('rating-filter').value;
+      const locationFilter = document.getElementById('location-filter').value.toLowerCase();
+      
+      const cards = document.querySelectorAll('.craftsman-card');
+      
+      cards.forEach(card => {
+        const skills = card.dataset.skills;
+        const rating = parseFloat(card.dataset.rating) || 0;
+        const location = card.dataset.location.toLowerCase();
+        
+        let show = true;
+        
+        if (skillFilter && !skills.includes(skillFilter)) {
+          show = false;
+        }
+        
+        if (ratingFilter && rating < parseFloat(ratingFilter)) {
+          show = false;
+        }
+        
+        if (locationFilter && !location.includes(locationFilter)) {
+          show = false;
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+      });
+    }

@@ -1,0 +1,71 @@
+extends ../layout
+
+block append head
+  // Font Awesome for icons
+  link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
+
+block content
+  .container
+    .dashboard-header
+      h1.dashboard-title Admin Dashboard
+      p.dashboard-subtitle Manage platform users and content
+    
+    .dashboard-stats
+      .stat-card
+        .stat-icon
+          i.fas.fa-users // Users icon
+        .stat-info
+          .stat-number= totalUsers
+          .stat-label Total Users
+      .stat-card
+        .stat-icon
+          i.fas.fa-clipboard-list // Jobs icon
+        .stat-info
+          .stat-number= totalJobs
+          .stat-label Total Jobs
+      .stat-card
+        .stat-icon
+          i.fas.fa-star // Reviews icon
+        .stat-info
+          .stat-number= totalReviews
+          .stat-label Reviews
+      .stat-card
+        .stat-icon
+          i.fas.fa-hourglass-half // Pending Approvals icon
+        .stat-info
+          .stat-number= pendingCraftsmen.length
+          .stat-label Pending Approvals
+    
+    .admin-sections
+      .admin-section
+        h2 Pending Craftsman Approvals
+        if pendingCraftsmen.length > 0
+          .approval-list
+            each craftsman in pendingCraftsmen
+              .approval-card
+                .approval-info
+                  h3= craftsman.name
+                  p Email: #{craftsman.email}
+                  p Mobile: #{craftsman.mobile}
+                  p Location: #{craftsman.location.city}, #{craftsman.location.district}, #{craftsman.location.region}
+                  if craftsman.skills && craftsman.skills.length > 0
+                    p Skills: #{craftsman.skills.join(', ')}
+                  p Experience: #{craftsman.experience} years
+                .approval-actions
+                  form.inline-form(action=`/admin/approve-craftsman/${craftsman._id}`, method="POST")
+                    button.btn.btn-success.btn-sm(type="submit") Approve
+                  form.inline-form(action=`/admin/reject-craftsman/${craftsman._id}`, method="POST")
+                    button.btn.btn-danger.btn-sm(type="submit") Reject
+        else
+          .empty-state
+            .empty-icon
+              i.fas.fa-check-circle // Checkmark icon for no pending
+            h3 No Pending Approvals
+            p All craftsman profiles are up to date
+      
+      .admin-section
+        h2 Platform Management
+        .management-actions
+          a.btn.btn-primary(href="/admin/blacklist") Manage Blacklist
+          a.btn.btn-secondary(href="/admin/reports") View Reports
+          a.btn.btn-secondary(href="/admin/export-data") Export Data
