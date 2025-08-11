@@ -1,0 +1,46 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title= pageTitle
+      p.page-subtitle Showing all registered #{userType}s.
+    
+    .admin-section
+      if users.length > 0
+        .user-list
+          each user in users
+            .user-card
+              .user-info
+                h3= user.name
+                p Email: #{user.email}
+                p Mobile: #{user.mobile}
+                if user.location && user.location.city
+                  p Location: #{user.location.city}
+                
+                //- Displaying specific details for Craftsmen
+                if user.role === 'craftsman'
+                  if user.skills && user.skills.length > 0
+                    p Skills: #{user.skills.join(', ')}
+                  if user.experience
+                    p Experience: #{user.experience} years
+                  
+                  if user.cvPath
+                    p
+                      a(href=`/uploads/${user.cvPath}`, target="_blank") View CV
+                  if user.coverLetterPath
+                    p
+                      a(href=`/uploads/${user.coverLetterPath}`, target="_blank") View Cover Letter
+                
+              .user-actions
+                //- Corrected: Conditional "View Profile" links based on user role
+                if user.role === 'craftsman'
+                  a.btn.btn-secondary.btn-sm(href=`/admin/craftsman/${user._id}`) View Profile
+                else if user.role === 'employer'
+                  a.btn.btn-secondary.btn-sm(href=`/admin/employer/${user._id}`) View Profile
+      else
+        .empty-state
+          .empty-icon
+            i.fas.fa-info-circle
+          h3 No #{userType}s Found
+          p There are currently no registered #{userType}s on the platform.

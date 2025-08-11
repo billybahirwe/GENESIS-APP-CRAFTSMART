@@ -1,0 +1,124 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Craftsman Profile
+      p.page-subtitle Profile details for #{user.name}
+    
+    .profile-container
+      .profile-details-section
+        h3 Personal Information
+        .details-group
+          strong Full Name:
+          span= user.name
+        .details-group
+          strong Email:
+          span= user.email
+        .details-group
+          strong Mobile:
+          span= user.mobile
+        .details-group
+          strong Location:
+          if user.location
+            span #{user.location.city}, #{user.location.district}, #{user.location.region}
+          else
+            span N/A
+        .details-group
+          strong Years of Experience:
+          span= user.experience ? user.experience + ' years' : 'N/A'
+        .details-group
+          strong Skills:
+          span= user.skills ? user.skills.join(', ') : 'N/A'
+        
+        h3 Documents
+        .details-group
+          strong CV:
+          if user.cvPath
+            a(href=user.cvPath, target="_blank") View CV
+          else
+            span Not uploaded
+        .details-group
+          strong Cover Letter:
+          if user.coverLetterPath
+            a(href=user.coverLetterPath, target="_blank") View Cover Letter
+          else
+            span Not uploaded
+
+      .profile-chart-section
+        .chart-container
+          h3 Skill Assessment
+          .chart-wrapper
+            canvas(id="skillChart", width="400", height="400")
+          .chart-legend
+            .legend-item
+              .legend-color.legend-user
+              span User Skills
+            .legend-item
+              .legend-color.legend-platform
+              span Platform Average
+
+block scripts
+  script.
+    const ctx = document.getElementById('skillChart').getContext('2d');
+    
+    const userSkills = !{JSON.stringify(user.profile || {})};
+    const platformAverage = !{JSON.stringify(platformAverage || {})};
+
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'],
+        datasets: [{
+          label: 'Your Skills',
+          data: [
+            userSkills.communication || 0,
+            userSkills.technicalSkill || 0,
+            userSkills.punctuality || 0,
+            userSkills.quality || 0,
+            userSkills.safety || 0
+          ],
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          borderColor: 'rgba(37, 99, 235, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(37, 99, 235, 1)'
+        }, {
+          label: 'Platform Average',
+          data: [
+            platformAverage.communication || 0,
+            platformAverage.technicalSkill || 0,
+            platformAverage.punctuality || 0,
+            platformAverage.quality || 0,
+            platformAverage.safety || 0
+          ],
+          backgroundColor: 'rgba(156, 163, 175, 0.2)',
+          borderColor: 'rgba(156, 163, 175, 1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(156, 163, 175, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(156, 163, 175, 1)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              stepSize: 20
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });

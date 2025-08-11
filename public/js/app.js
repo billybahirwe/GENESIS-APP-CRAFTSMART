@@ -1,53 +1,181 @@
-// Mobile Menu Toggle
+// =========================================================================
+// Utility Functions - Reusable logic for various parts of the application
+// =========================================================================
+
+/**
+ * Toggles the mobile navigation menu.
+ */
 function toggleMobileMenu() {
   const nav = document.getElementById('nav');
-  nav.classList.toggle('mobile-open');
+  if (nav) {
+    nav.classList.toggle('mobile-open');
+  }
 }
 
-// Form Validation
-function validateForm(formId) {
-  const form = document.getElementById(formId);
+/**
+ * A simple debounce function to limit how often a function is called.
+ * @param {Function} func - The function to debounce.
+ * @param {number} wait - The number of milliseconds to wait.
+ * @returns {Function} - The debounced function.
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Displays a temporary notification on the screen.
+ * @param {string} message - The message to display.
+ * @param {string} [type='info'] - The type of notification ('success', 'error', 'warning', 'info').
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.textContent = message;
+  
+  // Dynamic styling for the notification box
+  const styles = {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    padding: '1rem 1.5rem',
+    borderRadius: '8px',
+    color: 'white',
+    fontWeight: '500',
+    zIndex: '1000',
+    animation: 'slideIn 0.3s ease-out'
+  };
+
+  switch (type) {
+    case 'success':
+      styles.backgroundColor = '#16a34a';
+      break;
+    case 'error':
+      styles.backgroundColor = '#dc2626';
+      break;
+    case 'warning':
+      styles.backgroundColor = '#d97706';
+      break;
+    default:
+      styles.backgroundColor = '#2563eb';
+  }
+
+  Object.assign(notification.style, styles);
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
+}
+
+/**
+ * Shows a confirmation dialog and executes a callback if confirmed.
+ * @param {string} message - The confirmation message.
+ * @param {Function} callback - The function to execute on confirmation.
+ */
+function confirmAction(message, callback) {
+  if (window.confirm(message)) {
+    callback();
+  }
+}
+
+/**
+ * Sets a loading state on an element, typically a button.
+ * @param {HTMLElement} element - The element to modify.
+ * @param {boolean} isLoading - True to set loading state, false to remove.
+ */
+function setLoading(element, isLoading) {
+  if (element) {
+    element.classList.toggle('loading', isLoading);
+    element.disabled = isLoading;
+  }
+}
+
+// =========================================================================
+// Form & Input Specific Functions
+// =========================================================================
+
+/**
+ * Validates a form's required fields.
+ * @param {HTMLFormElement} form - The form element to validate.
+ * @returns {boolean} - True if the form is valid, otherwise false.
+ */
+function validateForm(form) {
+  if (!form) return false;
+  
   const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
   let isValid = true;
   
   inputs.forEach(input => {
     if (!input.value.trim()) {
       input.classList.add('error');
+      input.style.borderColor = '#dc2626';
       isValid = false;
     } else {
       input.classList.remove('error');
+      input.style.borderColor = ''; // Reset border color
     }
   });
+  
+  if (!isValid) {
+    showNotification('Please fill in all required fields', 'error');
+  }
   
   return isValid;
 }
 
-// Mobile Number Validation
+/**
+ * Validates a mobile number against a 10-digit regex.
+ * @param {string} mobile - The mobile number string.
+ * @returns {boolean} - True if valid, false otherwise.
+ */
 function validateMobile(mobile) {
-  const mobileRegex = /^[0-9]{10}$/;
+  const mobileRegex = /^\d{10}$/;
   return mobileRegex.test(mobile);
 }
 
-// Email Validation
+/**
+ * Validates an email address.
+ * @param {string} email - The email string.
+ * @returns {boolean} - True if valid, false otherwise.
+ */
 function validateEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-// Password Strength Indicator
+/**
+ * Provides a password strength score (0-5).
+ * @param {string} password - The password string.
+ * @returns {number} - The strength score.
+ */
 function checkPasswordStrength(password) {
   let strength = 0;
-  
   if (password.length >= 8) strength++;
   if (/[a-z]/.test(password)) strength++;
   if (/[A-Z]/.test(password)) strength++;
   if (/[0-9]/.test(password)) strength++;
   if (/[^a-zA-Z0-9]/.test(password)) strength++;
-  
   return strength;
 }
 
-// File Upload Preview
+/**
+ * Previews images selected in a file input.
+ * @param {HTMLInputElement} input - The file input element.
+ */
 function previewImages(input) {
   const preview = document.getElementById('image-preview');
   if (!preview) return;
@@ -61,10 +189,7 @@ function previewImages(input) {
         reader.onload = function(e) {
           const img = document.createElement('img');
           img.src = e.target.result;
-          img.style.maxWidth = '100px';
-          img.style.maxHeight = '100px';
-          img.style.margin = '5px';
-          img.style.borderRadius = '4px';
+          img.style.cssText = 'max-width:100px; max-height:100px; margin:5px; border-radius:4px;';
           preview.appendChild(img);
         };
         reader.readAsDataURL(file);
@@ -73,62 +198,10 @@ function previewImages(input) {
   }
 }
 
-// Search and Filter Functions
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
-// Notification System
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.className = `notification notification-${type}`;
-  notification.textContent = message;
-  
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    color: white;
-    font-weight: 500;
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-  `;
-  
-  switch (type) {
-    case 'success':
-      notification.style.backgroundColor = '#16a34a';
-      break;
-    case 'error':
-      notification.style.backgroundColor = '#dc2626';
-      break;
-    case 'warning':
-      notification.style.backgroundColor = '#d97706';
-      break;
-    default:
-      notification.style.backgroundColor = '#2563eb';
-  }
-  
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease-in';
-    setTimeout(() => {
-      document.body.removeChild(notification);
-    }, 300);
-  }, 3000);
-}
-
-// Auto-save for forms
+/**
+ * Enables auto-saving of form data to local storage.
+ * @param {string} formId - The ID of the form.
+ */
 function enableAutoSave(formId) {
   const form = document.getElementById(formId);
   if (!form) return;
@@ -143,7 +216,6 @@ function enableAutoSave(formId) {
     }, 1000));
   });
   
-  // Load saved data
   const savedData = localStorage.getItem(`autosave_${formId}`);
   if (savedData) {
     const data = JSON.parse(savedData);
@@ -156,68 +228,119 @@ function enableAutoSave(formId) {
   }
 }
 
-// Real-time Search
-function initializeSearch(searchInputId, targetClass) {
-  const searchInput = document.getElementById(searchInputId);
-  if (!searchInput) return;
+// =========================================================================
+// Socket.IO & Real-Time Messaging
+// =========================================================================
+
+/**
+ * Initializes the Socket.IO connection and handles real-time events.
+ */
+function initializeSocketIO() {
+  const userId = document.body.getAttribute('data-user-id');
   
-  searchInput.addEventListener('input', debounce((e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const items = document.querySelectorAll(`.${targetClass}`);
-    
-    items.forEach(item => {
-      const text = item.textContent.toLowerCase();
-      item.style.display = text.includes(searchTerm) ? 'block' : 'none';
-    });
-  }, 300));
-}
-
-// Loading States
-function setLoading(element, isLoading) {
-  if (isLoading) {
-    element.classList.add('loading');
-    element.disabled = true;
-  } else {
-    element.classList.remove('loading');
-    element.disabled = false;
+  if (!userId) {
+    console.log('No user ID found, skipping Socket.IO initialization.');
+    return;
   }
+
+  // Use the correct port for the server
+  const socket = io('http://localhost:3001');
+
+  socket.on('connect', () => {
+    console.log(`Connected to Socket.IO. Joining room for user: ${userId}`);
+    socket.emit('join', userId);
+  });
+
+  socket.on('newMessage', (messageData) => {
+    console.log('Received new message:', messageData);
+    // showNotification(`New message from ${messageData.senderId}`, 'info');
+    updateUnreadMessageCount();
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Disconnected from Socket.IO.');
+  });
 }
 
-// Confirmation Dialogs
-function confirmAction(message, callback) {
-  if (confirm(message)) {
-    callback();
-  }
-}
+/**
+ * Fetches the unread message count from the server and updates the badge.
+ */
+async function updateUnreadMessageCount() {
+  const notificationBadge = document.getElementById('message-notification-badge');
+  if (!notificationBadge) return;
 
-// Dynamic Content Loading
-async function loadContent(url, targetId) {
-  const target = document.getElementById(targetId);
-  if (!target) return;
-  
   try {
-    setLoading(target, true);
-    const response = await fetch(url);
-    const html = await response.text();
-    target.innerHTML = html;
+    const response = await fetch('/messages/unread-count');
+    if (!response.ok) {
+      throw new Error('Failed to fetch unread message count.');
+    }
+    const data = await response.json();
+    
+    if (data.count > 0) {
+      notificationBadge.textContent = data.count;
+      notificationBadge.style.display = 'block';
+    } else {
+      notificationBadge.textContent = '0';
+      notificationBadge.style.display = 'none';
+    }
   } catch (error) {
-    showNotification('Error loading content', 'error');
-  } finally {
-    setLoading(target, false);
+    console.error('Error fetching unread count:', error);
   }
 }
 
-// Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+// =========================================================================
+// Main App Initialization
+// =========================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Socket.IO for real-time features
+  initializeSocketIO();
+  
+  // Call the function on page load to set the initial count
+  updateUnreadMessageCount();
+
   // Add fade-in animation to main content
   const main = document.querySelector('.main');
   if (main) {
     main.classList.add('fade-in');
   }
   
-  // Initialize search functionality if present
-  initializeSearch('search-input', 'searchable-item');
-  
+  // Handle mobile menu clicks
+  document.querySelector('.mobile-menu-toggle')?.addEventListener('click', toggleMobileMenu);
+
+  // Initialize search functionality if a search input is present
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    const searchFunction = debounce((e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      document.querySelectorAll('.searchable-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    }, 300);
+    searchInput.addEventListener('input', searchFunction);
+  }
+
+  // --- FIX IS HERE ---
+  // Form validation on submit
+  document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      // Pass the form element itself to the validateForm function
+      if (!validateForm(this)) {
+        // Prevent the form from submitting if validation fails
+        e.preventDefault();
+      }
+      // If validation passes, the form will submit normally
+    });
+  });
+
+  // Add image preview for file inputs
+  document.querySelectorAll('input[type="file"]').forEach(input => {
+    if (input.accept && input.accept.includes('image')) {
+      input.addEventListener('change', () => previewImages(input));
+    }
+  });
+
   // Enable auto-save for profile forms
   enableAutoSave('profile-form');
   
@@ -227,96 +350,8 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const target = document.querySelector(this.getAttribute('href'));
       if (target) {
-        target.scrollIntoView({
-          behavior: 'smooth'
-        });
+        target.scrollIntoView({ behavior: 'smooth' });
       }
     });
   });
-  
-  // Form validation on submit
-  document.querySelectorAll('form').forEach(form => {
-    form.addEventListener('submit', function(e) {
-      const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-      let isValid = true;
-      
-      requiredInputs.forEach(input => {
-        if (!input.value.trim()) {
-          input.style.borderColor = '#dc2626';
-          isValid = false;
-        } else {
-          input.style.borderColor = '#e5e7eb';
-        }
-      });
-      
-      if (!isValid) {
-        e.preventDefault();
-        showNotification('Please fill in all required fields', 'error');
-      }
-    });
-  });
-  
-  // Add image preview for file inputs
-  document.querySelectorAll('input[type="file"]').forEach(input => {
-    if (input.accept && input.accept.includes('image')) {
-      input.addEventListener('change', function() {
-        previewImages(this);
-      });
-    }
-  });
-  
-  // Initialize tooltips and popovers if needed
-  initializeTooltips();
 });
-
-// Tooltip initialization
-function initializeTooltips() {
-  const tooltips = document.querySelectorAll('[data-tooltip]');
-  tooltips.forEach(element => {
-    element.addEventListener('mouseenter', showTooltip);
-    element.addEventListener('mouseleave', hideTooltip);
-  });
-}
-
-function showTooltip(e) {
-  const tooltip = document.createElement('div');
-  tooltip.className = 'tooltip';
-  tooltip.textContent = e.target.dataset.tooltip;
-  tooltip.style.cssText = `
-    position: absolute;
-    background: #1f2937;
-    color: white;
-    padding: 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    z-index: 1000;
-    pointer-events: none;
-  `;
-  
-  document.body.appendChild(tooltip);
-  
-  const rect = e.target.getBoundingClientRect();
-  tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
-  tooltip.style.top = rect.top - tooltip.offsetHeight - 10 + 'px';
-  
-  e.target.tooltipElement = tooltip;
-}
-
-function hideTooltip(e) {
-  if (e.target.tooltipElement) {
-    document.body.removeChild(e.target.tooltipElement);
-    e.target.tooltipElement = null;
-  }
-}
-
-// Export functions for use in other scripts
-window.CraftSmartApp = {
-  showNotification,
-  validateForm,
-  validateMobile,
-  validateEmail,
-  confirmAction,
-  setLoading,
-  loadContent,
-  enableAutoSave
-};

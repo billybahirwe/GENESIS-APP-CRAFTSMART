@@ -5,13 +5,15 @@ html(lang="en")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
     title CraftSmart - Craftsman Outsourcing Platform
     link(rel="stylesheet", href="/css/style.css")
-    script(src="https://cdn.jsdelivr.net/npm/chart.js")
     link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css")
-
-    // This block is the placeholder for child templates to add to the head
-    block head 
     
-  body(class=(path === '/' ? 'homepage' : ''))
+    // Add the Chart.js script here
+    script(src="https://cdn.jsdelivr.net/npm/chart.js")
+    
+    // This block is the placeholder for child templates to add to the head
+    block head
+    
+  body(class=(path === '/' ? 'homepage' : '') data-user-id=user ? user._id : '')
     header.header
       .container
         .header-content
@@ -29,34 +31,41 @@ html(lang="en")
                   li
                     a(href="/employer/browse-craftsmen") Browse Craftsmen
                 
-                if user.role === 'craftsman'
-                  li
-                    a(href="/craftsman/profile") My Profile
-                
                 if user.role === 'admin'
                   li
                     a(href="/admin/blacklist") Admin Blacklist
-                
-                li
-                  a(href="/messages") Messages
-                
-                // Public blacklist is available to all logged-in users
+          
                 li
                   a(href="/public-blacklist") Public Blacklist
 
-                li
-                  span.user-info Welcome, #{user.name}
-                li
-                  a(href="/logout") Logout
               else
                 li
                   a(href="/login") Login
                 li
                   a(href="/register") Register
-                // Public blacklist is also available to guests
                 li
                   a(href="/public-blacklist") Public Blacklist
-          
+    
+          .header-icons
+            if user
+              // Notification bell icon with message count
+              a.nav-icon.notification-link(href="#")
+                i.fas.fa-bell
+                span#notification-badge.notification-badge 0
+              
+              // Messages icon
+              a.nav-icon.messages-link(href="/messages")
+                i.fas.fa-envelope
+              
+              if user.role === 'craftsman'
+                // My Profile icon
+                a.nav-icon(href="/craftsman/profile")
+                  i.fas.fa-user-circle
+              
+              // Logout icon
+              a.nav-icon(href="/logout")
+                i.fas.fa-sign-out-alt
+    
           .mobile-menu-toggle(onclick="toggleMobileMenu()")
             span
             span
@@ -69,5 +78,10 @@ html(lang="en")
       .container
         p &copy; 2025 CraftSmart. All rights reserved.
     
+    // Socket.IO and custom script for real-time notifications
+    // Your client-side code will be in one of these files.
+    // The socket.io.js script is served automatically by the library.
+    script(src="/socket.io/socket.io.js")
     script(src="/js/app.js")
+    script(src="/js/scripts.js")
     block scripts

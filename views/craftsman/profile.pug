@@ -8,7 +8,7 @@ block content
     
     .profile-container
       .profile-form-section
-        form.profile-form(action="/craftsman/profile", method="POST")
+        form.profile-form(action="/craftsman/profile", method="POST", enctype="multipart/form-data")
           .form-row
             .form-group
               label(for="name") Full Name
@@ -19,16 +19,31 @@ block content
           
           .form-row
             .form-group
-              label(for="location") Location
-              input.form-control(type="text", id="location", name="location", value=user.location, required)
+              label(for="city") City
+              input.form-control(type="text", id="city", name="location[city]", value=user.location && user.location.city ? user.location.city : '', required)
             .form-group
-              label(for="experience") Years of Experience
-              input.form-control(type="number", id="experience", name="experience", value=user.experience, min="0", required)
+              label(for="region") Region
+              input.form-control(type="text", id="region", name="location[region]", value=user.location && user.location.region ? user.location.region : '', required)
+            .form-group
+              label(for="district") District
+              input.form-control(type="text", id="district", name="location[district]", value=user.location && user.location.district ? user.location.district : '', required)
+          
+          .form-group
+            label(for="experience") Years of Experience
+            input.form-control(type="number", id="experience", name="experience", value=user.experience, min="0", required)
           
           .form-group
             label(for="skills") Skills (comma-separated)
             input.form-control(type="text", id="skills", name="skills", value=user.skills ? user.skills.join(', ') : '', placeholder="e.g., Plumbing, Electrical, Carpentry")
           
+          .form-group
+            label(for="cv") Upload your CV (PDF only)
+            input.form-control(type="file", id="cv", name="cv", accept="application/pdf")
+          
+          .form-group
+            label(for="coverLetter") Upload your Cover Letter (PDF only)
+            input.form-control(type="file", id="coverLetter", name="coverLetter", accept="application/pdf")
+
           .form-actions
             button.btn.btn-primary(type="submit") Update Profile
             if !user.approved
@@ -49,9 +64,7 @@ block content
 
 block scripts
   script.
-    // Radar Chart Configuration
     const ctx = document.getElementById('skillChart').getContext('2d');
-    
     const userSkills = !{JSON.stringify(user.profile)};
     const platformAverage = !{JSON.stringify(platformAverage)};
     

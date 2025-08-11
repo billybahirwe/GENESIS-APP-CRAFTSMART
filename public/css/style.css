@@ -1266,6 +1266,52 @@ label {
     margin-top: 1rem;
 }
 
+/* Add this to your style.css file */
+
+.header-icons {
+  display: flex;
+  align-items: center;
+}
+
+.header-icons .nav-icon {
+  position: relative;
+  text-decoration: none;
+  color: #333; /* This is the color for all icons */
+  font-size: 1.5em; /* Adjust icon size as needed */
+  margin-left: 30px; /* Increased value for a BIGGER space between icons */
+}
+
+/* Add this to your style.css file */
+
+.header-icons {
+  display: flex;
+  align-items: center;
+}
+
+.header-icons .nav-icon {
+  position: relative;
+  text-decoration: none;
+  color: #333; /* This is the color for all icons */
+  font-size: 1.5em; /* Adjust icon size 
+  margin-left: 30px; /* Increased value for a BIGGER space between icons */
+}
+
+/* Style for the notification badge on the bell icon */
+#notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ff4d4f; /* Red color for notification */
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.7em;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+  display: none; /* Hide the badge by default */
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .dashboard-stats {
