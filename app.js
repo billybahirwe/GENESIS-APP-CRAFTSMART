@@ -26,7 +26,7 @@ const PORT = process.env.PORT || 3002;
 
 // --- Import Models ---
 const User = require('./models/user');
-const Job = require('./models/Job');
+const Job = require('./models/job');
 const Review = require('./models/Review');
 const Blacklist = require('./models/Blacklist');
 const Message = require('./models/Message');
