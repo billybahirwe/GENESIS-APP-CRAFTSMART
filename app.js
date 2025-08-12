@@ -27,9 +27,9 @@ const PORT = process.env.PORT || 3002;
 // --- Import Models ---
 const User = require('./models/user');
 const Job = require('./models/job');
-const Review = require('./models/Review');
-const Blacklist = require('./models/Blacklist');
-const Message = require('./models/Message');
+const Review = require('./models/review');
+const Blacklist = require('./models/blacklist');
+const Message = require('./models/message');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI).then(() => {
