@@ -34,7 +34,8 @@ html(lang="en")
                 if user.role === 'admin'
                   li
                     a(href="/admin/blacklist") Admin Blacklist
-          
+              
+                // The public blacklist link is now conditional
                 li
                   a(href="/public-blacklist") Public Blacklist
 
@@ -43,9 +44,11 @@ html(lang="en")
                   a(href="/login") Login
                 li
                   a(href="/register") Register
-                li
-                  a(href="/public-blacklist") Public Blacklist
-    
+                // The public blacklist link is now conditional for unauthenticated users as well
+                if path !== '/'
+                  li
+                    a(href="/public-blacklist") Public Blacklist
+      
           .header-icons
             if user
               // Notification bell icon with message count
@@ -65,7 +68,7 @@ html(lang="en")
               // Logout icon
               a.nav-icon(href="/logout")
                 i.fas.fa-sign-out-alt
-    
+      
           .mobile-menu-toggle(onclick="toggleMobileMenu()")
             span
             span

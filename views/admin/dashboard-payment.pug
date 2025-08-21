@@ -1,0 +1,82 @@
+//- This Pug template creates the main admin payments list page.
+//- It displays a table of all transactions with their status and details.
+
+extends ../layout
+
+//- Assume these utility functions are available, or define them here if not.
+//- For this example, we'll define a simple one to make the code self-contained.
+//- In your actual app, these would likely be included in your main layout.
+mixin formatCurrency(amount)
+  | {{ amount.toLocaleString('en-UG', { style: 'currency', currency: 'UGX' }) }}
+
+block content
+  .min-h-screen.bg-gray-100.py-8.px-4
+    .max-w-7xl.mx-auto
+      .bg-white.rounded-2xl.card-shadow.overflow-hidden
+        // Header
+        div(class="gradient-bg px-6 py-8 text-white text-center sm:text-left")
+          div(class="flex flex-col sm:flex-row items-center justify-between")
+            h1(class="text-2xl font-bold mb-2 sm:mb-0") Payment Transactions
+            .text-right
+              p.text-blue-100 Manage all your payments
+              p.text-xs.text-blue-200.mt-1 Data as of #{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+        // Transaction List
+        .p-6.overflow-x-auto
+          if transactions && transactions.length
+            .min-w-full.inline-block.align-middle
+              .overflow-hidden.border.border-gray-200.rounded-lg.shadow-sm
+                table.min-w-full.divide-y.divide-gray-200
+                  thead.bg-gray-50
+                    tr
+                      th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Case ID
+                      th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Amount
+                      th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Status
+                      th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Initiated
+                      th.relative.px-6.py-3
+                        span.sr-only Actions
+                  tbody.bg-white.divide-y.divide-gray-200
+                    each transaction in transactions
+                      tr
+                        td.px-6.py-4.whitespace-nowrap.text-sm.font-medium.text-gray-900 ##{transaction.case_id}
+                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500= formatCurrency(transaction.total_amount)
+                        td.px-6.py-4.whitespace-nowrap.text-sm
+                          case transaction.status
+                            when 'PENDING'
+                              .status-badge.bg-gray-100.text-gray-800
+                                i.fas.fa-clock.mr-1
+                                | Pending
+                            when 'PAYMENT_REQUESTED'
+                              .status-badge.bg-blue-100.text-blue-800
+                                i.fas.fa-mobile-alt.mr-1
+                                | Requested
+                            when 'PAYMENT_RECEIVED'
+                              .status-badge.bg-green-100.text-green-800
+                                i.fas.fa-check-circle.mr-1
+                                | Received
+                            when 'PAYMENT_FAILED'
+                              .status-badge.bg-red-100.text-red-800
+                                i.fas.fa-times-circle.mr-1
+                                | Failed
+                            when 'DISBURSEMENT_INITIATED'
+                              .status-badge.bg-yellow-100.text-yellow-800
+                                i.fas.fa-arrow-right.mr-1
+                                | Disbursement
+                            when 'DISBURSEMENT_FAILED'
+                              .status-badge.bg-red-100.text-red-800
+                                i.fas.fa-exclamation-triangle.mr-1
+                                | Disbursement Failed
+                            default
+                              .status-badge.bg-gray-100.text-gray-800= transaction.status
+                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500= new Date(transaction.created_at).toLocaleDateString()
+                        td.px-6.py-4.whitespace-nowrap.text-right.text-sm.font-medium
+                          a(href=`/admin/payments/${transaction.transaction_id}`, class="text-indigo-600 hover:text-indigo-900") View
+
+          else
+            .text-center.p-8.text-gray-500
+              p.text-lg.font-semibold No payments found.
+              p.text-sm Start processing new payments to see them here.
+
+block scripts
+  //- Any client-side scripts for this page would go here.
+  //- For now, we'll assume the Pug file is just for display.

@@ -26,6 +26,7 @@ block content
     .dashboard-actions
       a.btn.btn-primary(href="/employer/post-job") Post New Job
       a.btn.btn-secondary(href="/employer/browse-craftsmen") Browse Craftsmen
+      a.btn.btn-primary(href="/employer/payment-form") Make Payment
     
     .dashboard-section
       h2 Your Recent Jobs
@@ -44,6 +45,10 @@ block content
                   button.btn.btn-sm.btn-secondary View Applications
                 else if job.status === 'in-progress'
                   button.btn.btn-sm.btn-primary Contact Craftsman
+                //- NEW: Show this button if the job has been paid but not yet disbursed to the craftsman
+                if job.status === 'SUCCESSFUL'
+                  form.inline-form(action=`/payment/disburse/${job.transaction_id}`, method="POST")
+                    button.btn.btn-sm.btn-success(type="submit") Release Funds
       else
         .empty-state
           .empty-icon 📋

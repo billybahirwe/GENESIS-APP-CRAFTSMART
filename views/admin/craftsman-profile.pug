@@ -5,8 +5,14 @@ block content
     .page-header
       h1.page-title Craftsman Profile
       p.page-subtitle Profile details for #{user.name}
-    
+
     .profile-container
+      .profile-picture-section
+        if user.profilePicture
+          img.profile-img(src=user.profilePicture, alt="Profile Picture")
+        else
+          span.profile-initial #{user.name.charAt(0)}
+
       .profile-details-section
         h3 Personal Information
         .details-group
@@ -59,10 +65,75 @@ block content
               span Platform Average
 
 block scripts
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
   script.
+    // CSS for the chart and other layout elements
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .profile-container {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+      }
+      .profile-details-section {
+        flex: 1;
+      }
+      .profile-chart-section {
+        flex: 1;
+        position: sticky;
+        top: 50px;
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .profile-picture-section img {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      .profile-picture-section .profile-initial {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: #f0f4f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        font-weight: bold;
+        color: #6b7280;
+      }
+      .chart-legend {
+        display: flex;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 0 10px;
+      }
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+      }
+      .legend-user {
+        background-color: rgba(37, 99, 235, 1);
+      }
+      .legend-platform {
+        background-color: rgba(156, 163, 175, 1);
+      }
+    `;
+    document.head.appendChild(style);
+
     const ctx = document.getElementById('skillChart').getContext('2d');
     
+    // The user's profile data
     const userSkills = !{JSON.stringify(user.profile || {})};
+    // The platform average data (if you are passing it)
     const platformAverage = !{JSON.stringify(platformAverage || {})};
 
     new Chart(ctx, {
@@ -70,13 +141,14 @@ block scripts
       data: {
         labels: ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'],
         datasets: [{
-          label: 'Your Skills',
+          label: 'User Skills',
+          // Correctly scale the data from a 1-5 rating to a 0-100 scale for the chart
           data: [
-            userSkills.communication || 0,
-            userSkills.technicalSkill || 0,
-            userSkills.punctuality || 0,
-            userSkills.quality || 0,
-            userSkills.safety || 0
+            (userSkills.communication || 0) * 20,
+            (userSkills.technicalSkill || 0) * 20,
+            (userSkills.punctuality || 0) * 20,
+            (userSkills.quality || 0) * 20,
+            (userSkills.safety || 0) * 20
           ],
           backgroundColor: 'rgba(37, 99, 235, 0.2)',
           borderColor: 'rgba(37, 99, 235, 1)',
@@ -88,11 +160,11 @@ block scripts
         }, {
           label: 'Platform Average',
           data: [
-            platformAverage.communication || 0,
-            platformAverage.technicalSkill || 0,
-            platformAverage.punctuality || 0,
-            platformAverage.quality || 0,
-            platformAverage.safety || 0
+            (platformAverage.communication || 0) * 20,
+            (platformAverage.technicalSkill || 0) * 20,
+            (platformAverage.punctuality || 0) * 20,
+            (platformAverage.quality || 0) * 20,
+            (platformAverage.safety || 0) * 20
           ],
           backgroundColor: 'rgba(156, 163, 175, 0.2)',
           borderColor: 'rgba(156, 163, 175, 1)',

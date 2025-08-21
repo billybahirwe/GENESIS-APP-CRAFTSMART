@@ -1,0 +1,21 @@
+extends layout
+
+block content
+  .min-h-screen.flex.items-center.justify-center.bg-gray-50.py-12.px-4.sm:px-6.lg:px-8
+    .max-w-md.w-full.text-center
+      .mb-8
+        i.fas.fa-exclamation-circle.text-6xl.text-red-400.mb-4
+        h1.text-4xl.font-bold.text-gray-900.mb-2 Error
+        h2.text-xl.text-gray-600= message
+        if error && error.stack
+          .mt-4.text-left.bg-gray-100.p-4.rounded-lg.text-sm.font-mono.text-gray-700
+            pre= error.stack
+
+      .space-y-4
+        a(href='/').btn-primary.text-white.px-6.py-3.rounded-lg.inline-flex.items-center.font-medium
+          i.fas.fa-home.mr-2
+          | Go Home
+        br
+        a(href='javascript:history.back()').text-blue-600.hover:text-blue-800.inline-flex.items-center
+          i.fas.fa-arrow-left.mr-2
+          | Go Back

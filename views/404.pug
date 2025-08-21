@@ -1,0 +1,20 @@
+extends layout
+
+block content
+  .min-h-screen.flex.items-center.justify-center.bg-gray-50.py-12.px-4.sm:px-6.lg:px-8
+    .max-w-md.w-full.text-center
+      .mb-8
+        i.fas.fa-exclamation-triangle.text-6xl.text-gray-400.mb-4
+        h1.text-4xl.font-bold.text-gray-900.mb-2 404
+        h2.text-xl.text-gray-600 Page Not Found
+        p.text-gray-500.mt-4
+          | The page you're looking for doesn't exist or has been moved.
+
+      .space-y-4
+        a(href='/').btn-primary.text-white.px-6.py-3.rounded-lg.inline-flex.items-center.font-medium
+          i.fas.fa-home.mr-2
+          | Go Home
+        br
+        a(href='/admin/dashboard').text-blue-600.hover:text-blue-800.inline-flex.items-center
+          i.fas.fa-chart-bar.mr-2
+          | Admin Dashboard

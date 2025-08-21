@@ -1,7 +1,6 @@
 extends ../layout
 
 block append head
-  // Font Awesome for icons
   link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
 
 block content
@@ -13,25 +12,25 @@ block content
     .dashboard-stats
       .stat-card
         .stat-icon
-          i.fas.fa-users // Users icon
+          i.fas.fa-users
         .stat-info
           .stat-number= totalUsers
           .stat-label Total Users
       .stat-card
         .stat-icon
-          i.fas.fa-clipboard-list // Jobs icon
+          i.fas.fa-clipboard-list
         .stat-info
           .stat-number= totalJobs
           .stat-label Total Jobs
       .stat-card
         .stat-icon
-          i.fas.fa-star // Reviews icon
+          i.fas.fa-star
         .stat-info
           .stat-number= totalReviews
           .stat-label Reviews
       .stat-card
         .stat-icon
-          i.fas.fa-hourglass-half // Pending Approvals icon
+          i.fas.fa-hourglass-half
         .stat-info
           .stat-number= pendingCraftsmen.length
           .stat-label Pending Approvals
@@ -59,17 +58,19 @@ block content
         else
           .empty-state
             .empty-icon
-              i.fas.fa-check-circle // Checkmark icon for no pending
+              i.fas.fa-check-circle
             h3 No Pending Approvals
             p All craftsman profiles are up to date
       
       .admin-section
         h2 Platform Management
         .management-actions
-          //- NEW BUTTONS ADDED HERE
           a.btn.btn-secondary(href="/admin/craftsmen") View All Craftsmen
           a.btn.btn-secondary(href="/admin/employers") View All Employers
-          
           a.btn.btn-primary(href="/admin/blacklist") Manage Blacklist
           a.btn.btn-secondary(href="/admin/reports") View Reports
+          
+          //- NEW BUTTON to link to the payments page
+          a.btn.btn-secondary(href="/admin/payments") Manage Payments
+          
           a.btn.btn-secondary(href="/admin/export-data") Export Data

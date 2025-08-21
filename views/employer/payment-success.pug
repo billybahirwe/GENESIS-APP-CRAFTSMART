@@ -1,0 +1,30 @@
+// This file now correctly extends your main layout.pug
+extends ../layout
+
+// Everything inside this block will be placed in the layout's "block content"
+block content
+  .container
+    h2 Payment Initiated Successfully!
+    p Please click the button below to complete the payment on Flutterwave.
+    
+    // The link is now dynamically generated in JavaScript within this block
+    // You can't use Pug's `- const` on the client side, so we use a script tag
+    script.
+      const params = new URLSearchParams(window.location.search);
+      const paymentUrl = params.get('url');
+      const container = document.querySelector('.container');
+      
+      if (paymentUrl) {
+        const link = document.createElement('a');
+        link.href = decodeURIComponent(paymentUrl);
+        link.target = '_blank';
+        link.textContent = 'Complete Payment on Flutterwave';
+        container.appendChild(link);
+      } else {
+        const message = document.createElement('p');
+        message.textContent = 'Payment URL not found. Please contact support.';
+        container.appendChild(message);
+      }
+    a.btn.btn-primary(href="/employer/dashboard") Go to Dashboard
+    p If you encounter any issues, please contact support at <a href="mailto:support
+@craftsmart.com">

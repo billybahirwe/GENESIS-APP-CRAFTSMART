@@ -66,3 +66,7 @@ block content
               .job-actions
                 button.btn.btn-primary.btn-sm Contact Employer
                 button.btn.btn-secondary.btn-sm Update Status
+                if job.status === 'SUCCESSFUL'
+                  p.payment-status(style='color: #FFC107; font-weight: bold;') Employer has paid. Funds pending release.
+                else if job.status === 'COMPLETED'
+                  p.payment-status(style='color: #4CAF50; font-weight: bold;') Funds received!
