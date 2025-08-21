@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-require('dotenv').config();
 
 // Create the connection configuration object
 let dbConfig;
@@ -12,14 +11,16 @@ if (process.env.DATABASE_URL) {
     }
   };
 } else {
-  // Fallback to individual variables for local development
+  // This block runs ONLY in local development
+  // It requires dotenv and individual variables
+  require('dotenv').config();
   dbConfig = {
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
-    ssl: false // Local connections typically do not use SSL
+    ssl: false
   };
 }
 
