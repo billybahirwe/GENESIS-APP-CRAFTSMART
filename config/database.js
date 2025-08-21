@@ -1,15 +1,11 @@
 const { Pool } = require('pg');
 
-// This conditional logic ensures dotenv is only used in a local environment
-// when the DATABASE_URL environment variable is NOT present.
-// This prevents it from overwriting the production environment variables on Render.
-if (!process.env.DATABASE_URL) {
-  require('dotenv').config();
-}
-
 // Create the connection configuration object
 let dbConfig;
-if (process.env.DATABASE_URL) {
+
+// Use the NODE_ENV variable to determine the environment.
+// This is a more robust check than relying on the presence of a variable.
+if (process.env.NODE_ENV === 'production') {
   // Use a single connection string for production (Render)
   dbConfig = {
     connectionString: process.env.DATABASE_URL,
@@ -18,7 +14,9 @@ if (process.env.DATABASE_URL) {
     }
   };
 } else {
-  // Fallback to individual variables for local development
+  // This block runs ONLY in local development
+  // It requires dotenv and individual variables
+  require('dotenv').config();
   dbConfig = {
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -38,6 +36,10 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ Database connection error:', err);
+  // Log the environment variables being used to aid in debugging
+  console.error('Debug Info - NODE_ENV:', process.env.NODE_ENV);
+  console.error('Debug Info - DATABASE_URL:', process.env.DATABASE_URL);
+  console.error('Debug Info - DB_HOST:', process.env.DB_HOST);
   process.exit(-1);
 });
 
