@@ -1,5 +1,12 @@
 const { Pool } = require('pg');
 
+// This conditional logic ensures dotenv is only used in a local environment
+// when the DATABASE_URL environment variable is NOT present.
+// This prevents it from overwriting the production environment variables on Render.
+if (!process.env.DATABASE_URL) {
+  require('dotenv').config();
+}
+
 // Create the connection configuration object
 let dbConfig;
 if (process.env.DATABASE_URL) {
@@ -11,9 +18,7 @@ if (process.env.DATABASE_URL) {
     }
   };
 } else {
-  // This block runs ONLY in local development
-  // It requires dotenv and individual variables
-  require('dotenv').config();
+  // Fallback to individual variables for local development
   dbConfig = {
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
