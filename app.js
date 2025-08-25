@@ -12,7 +12,7 @@ const socketIo = require('socket.io');
 // --- Middleware and Configuration Imports ---
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+// const rateLimit = require('express-rate-limit');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 require('dotenv').config();
@@ -68,18 +68,18 @@ app.use(cors({
   credentials: true
 }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 100
+// });
+// app.use(limiter);
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json({ limit: '10mb' }));
+// app.use(bodyParser.urlencoded({ extended: true }));
 
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined'));
-}
+// if (process.env.NODE_ENV !== 'test') {
+//   app.use(morgan('combined'));
+// }
 
 // --- Configure Multer for File Uploads (Existing) ---
 const storage = multer.diskStorage({

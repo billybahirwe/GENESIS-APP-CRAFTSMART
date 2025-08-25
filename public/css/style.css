@@ -13,9 +13,9 @@ body {
     color: #374151;
     margin: 0;
     padding: 0;
-
-    /* Removed the global background image to make room for the hero slider */
-    background: #f3f4f6; /* A clean, neutral background for other pages */
+    
+    /* Updated background color for all pages */
+    background: #e9eff4; 
 }
 
 .container {
@@ -28,11 +28,19 @@ body {
     2. Layout & Structure
     ====================================== */
 .main {
-    background-color: rgba(255, 255, 255, 0.6);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    /* Removed background-color to use the new body background */
+    background-color: transparent;
+    box-shadow: none;
     border-radius: 12px;
     min-height: calc(100vh - 120px);
     padding: 2rem 0;
+}
+
+/* New style for the homepage main content area */
+body.homepage .main {
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
 }
 
 /* =======================================
@@ -125,6 +133,43 @@ body {
     display: none;
 }
 
+/* --- NEW: Profile Dropdown Styling --- */
+.profile-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.profile-dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.profile-dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+.profile-dropdown-content a .fas {
+    margin-right: 8px;
+}
+
+.show {
+    display: block;
+}
+
 /* =======================================
     4. Sections & Components
     ======================================= */
@@ -142,6 +187,9 @@ body {
     background-repeat: no-repeat;
     animation: imageSlider 20s infinite; /* 4 images * 5 seconds each */
     position: relative;
+    
+    /* Ensure no solid background color is applied directly to the hero section */
+    background-color: transparent;
 }
 
 .hero::before {
@@ -1242,12 +1290,12 @@ label {
         align-items: center;
     }
     
-    /* Mobile Menu Functionality */
+    /* Mobile Menu Functionality - reduced width */
     .nav {
         position: fixed;
         top: 0;
         left: -100%;
-        width: 80%;
+        width: 70%; /* Reduced from 80% */
         height: 100vh;
         background: #f8f9fa;
         padding-top: 6rem;

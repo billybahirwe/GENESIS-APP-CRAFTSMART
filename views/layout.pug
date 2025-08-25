@@ -5,7 +5,7 @@ html(lang="en")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
     title CraftSmart - Craftsman Outsourcing Platform
     link(rel="stylesheet", href="/css/style.css")
-    link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css")
+    link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css")
     
     // Add the Chart.js script here
     script(src="https://cdn.jsdelivr.net/npm/chart.js")
@@ -35,15 +35,17 @@ html(lang="en")
                   li
                     a(href="/admin/blacklist") Admin Blacklist
                 
-                // The public blacklist link is now only conditional for logged in users
                 li
                   a(href="/public-blacklist") Public Blacklist
-
+                li
+                  a(href="/logout") Logout
               else
                 li
                   a(href="/login") Login
                 li
                   a(href="/register") Register
+                li
+                  a(href="/contact") Contact Us
           
           .header-icons
             if user
@@ -56,14 +58,18 @@ html(lang="en")
               a.nav-icon.messages-link(href="/messages")
                 i.fas.fa-envelope
               
-              if user.role === 'craftsman'
-                // My Profile icon
-                a.nav-icon(href="/craftsman/profile")
+              // Profile dropdown (now without logout)
+              .profile-dropdown
+                a.nav-icon.profile-icon(href="#", onclick="toggleDropdown(event)")
                   i.fas.fa-user-circle
-              
-              // Logout icon
-              a.nav-icon(href="/logout")
-                i.fas.fa-sign-out-alt
+                
+                .profile-dropdown-content#profileDropdown
+                  a(href=`/${user.role}/profile`)
+                    i.fas.fa-user.mr-2
+                    | My Profile
+                  a(href="/contact")
+                    i.fas.fa-envelope.mr-2
+                    | Contact Us
       
           .mobile-menu-toggle(onclick="toggleMobileMenu()")
             span
@@ -77,10 +83,29 @@ html(lang="en")
       .container
         p &copy; 2025 CraftSmart. All rights reserved.
     
-    // Socket.IO and custom script for real-time notifications
-    // Your client-side code will be in one of these files.
-    // The socket.io.js script is served automatically by the library.
     script(src="/socket.io/socket.io.js")
-    script(src="/js/app.js")
     script(src="/js/scripts.js")
     block scripts
+    
+    script.
+      function toggleDropdown(event) {
+        event.stopPropagation();
+        document.getElementById("profileDropdown").classList.toggle("show");
+      }
+      
+      window.onclick = function(event) {
+        if (!event.target.matches('.profile-icon i')) {
+          var dropdowns = document.getElementsByClassName("profile-dropdown-content");
+          for (var i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show')) {
+              openDropdown.classList.remove('show');
+            }
+          }
+        }
+      }
+
+      function toggleMobileMenu() {
+        const nav = document.getElementById('nav');
+        nav.classList.toggle('nav-active');
+      }
