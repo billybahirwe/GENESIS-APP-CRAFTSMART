@@ -1,0 +1,69 @@
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  title Make a Payment
+  script(src='https://cdn.tailwindcss.com')
+  style.
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f7fafc;
+    }
+// Main Payment Form Container
+.bg-white.p-8.rounded-lg.shadow-lg.max-w-lg.w-full
+  // Header
+  h2.text-3xl.font-bold.text-gray-800.mb-6.text-center Complete Your Payment
+  p.text-gray-600.mb-8.text-center
+    | You are about to make a payment to a craftsman. Please confirm the details below to proceed.
+  // Payment Details Display
+  .space-y-4.mb-8
+    .flex.justify-between.items-center.pb-2.border-b.border-gray-200
+      span.text-gray-700.font-medium Job ID:
+      span#caseIdDisplay.text-gray-900.font-semibold
+    .flex.justify-between.items-center.pb-2.border-b.border-gray-200
+      span.text-gray-700.font-medium Total Amount:
+      span#amountDisplay.text-green-600.font-semibold.text-xl
+    .flex.justify-between.items-center.pb-2.border-b.border-gray-200
+      span.text-gray-700.font-medium Payment Method:
+      span#methodDisplay.text-gray-900.font-semibold
+  // Form to Submit Payment
+  form#paymentForm.space-y-6(action='/payment/initiate-mobile-money' method='POST')
+    // Hidden inputs to send data to the backend
+    input#caseId(type='hidden' name='caseId')
+    input#employerId(type='hidden' name='employerId')
+    input#craftsmanId(type='hidden' name='craftsmanId')
+    input#employerPhone(type='hidden' name='employerPhone')
+    input#craftsmanPhone(type='hidden' name='craftsmanPhone')
+    input#totalAmount(type='hidden' name='totalAmount')
+    input#paymentMethod(type='hidden' name='paymentMethod')
+    // Submit Button
+    button.w-full.bg-blue-600.text-white.font-bold.py-3.px-4.rounded-lg.transition.duration-200.ease-in-out(type='submit' class='hover:bg-blue-700 focus:outline-none focus:shadow-outline')
+      | Pay Now
+// JavaScript to populate the form and submit automatically
+script.
+  document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  // Get data from URL parameters
+  const caseId = params.get('caseId');
+  const employerId = params.get('employerId');
+  const craftsmanId = params.get('craftsmanId');
+  const totalAmount = params.get('totalAmount');
+  const paymentMethod = params.get('paymentMethod');
+  const employerPhone = params.get('employerPhone');
+  const craftsmanPhone = params.get('craftsmanPhone');
+  // Populate the display elements
+  document.getElementById('caseIdDisplay').textContent = caseId;
+  document.getElementById('amountDisplay').textContent = `UGX ${parseFloat(totalAmount).toLocaleString()}`;
+  document.getElementById('methodDisplay').textContent = paymentMethod.toUpperCase();
+  // Populate the hidden form inputs
+  document.getElementById('caseId').value = caseId;
+  document.getElementById('employerId').value = employerId;
+  document.getElementById('craftsmanId').value = craftsmanId;
+  document.getElementById('employerPhone').value = employerPhone;
+  document.getElementById('craftsmanPhone').value = craftsmanPhone;
+  document.getElementById('totalAmount').value = totalAmount;
+  document.getElementById('paymentMethod').value = paymentMethod;
+  // Automatically submit the form
+  document.getElementById('paymentForm').submit();
+  });

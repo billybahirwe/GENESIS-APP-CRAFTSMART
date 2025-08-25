@@ -1,7 +1,7 @@
 extends layout
 
 block content
-  .container
+  .container.mt-4
     .page-header
       h1.page-title Public Blacklist
       p.page-subtitle List of users who have been blacklisted from the platform.
@@ -16,7 +16,7 @@ block content
                 p.blacklist-mobile Mobile: #{entry.mobile}
                 p.blacklist-reason= entry.reason
               .blacklist-meta
-                span.blacklist-date Added: #{entry.addedAt.toLocaleDateString()}
+                span.blacklist-date Added: #{formatDate(entry.addedAt)}
       else
         .empty-state
           .empty-icon 🎉

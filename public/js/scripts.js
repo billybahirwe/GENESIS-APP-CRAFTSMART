@@ -7,8 +7,12 @@
  */
 function toggleMobileMenu() {
   const nav = document.getElementById('nav');
-  if (nav) {
-    nav.classList.toggle('mobile-open');
+  const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+
+  if (nav && mobileMenuToggle) {
+    // We'll use the .nav-active and .open classes to match our CSS
+    nav.classList.toggle('nav-active');
+    mobileMenuToggle.classList.toggle('open');
   }
 }
 
@@ -39,7 +43,7 @@ function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.className = `notification notification-${type}`;
   notification.textContent = message;
-  
+
   // Dynamic styling for the notification box
   const styles = {
     position: 'fixed',
@@ -68,9 +72,9 @@ function showNotification(message, type = 'info') {
   }
 
   Object.assign(notification.style, styles);
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.style.animation = 'slideOut 0.3s ease-in';
     setTimeout(() => {
@@ -115,10 +119,10 @@ function setLoading(element, isLoading) {
  */
 function validateForm(form) {
   if (!form) return false;
-  
+
   const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
   let isValid = true;
-  
+
   inputs.forEach(input => {
     if (!input.value.trim()) {
       input.classList.add('error');
@@ -129,11 +133,11 @@ function validateForm(form) {
       input.style.borderColor = ''; // Reset border color
     }
   });
-  
+
   if (!isValid) {
     showNotification('Please fill in all required fields', 'error');
   }
-  
+
   return isValid;
 }
 
@@ -179,9 +183,9 @@ function checkPasswordStrength(password) {
 function previewImages(input) {
   const preview = document.getElementById('image-preview');
   if (!preview) return;
-  
+
   preview.innerHTML = '';
-  
+
   if (input.files) {
     Array.from(input.files).forEach(file => {
       if (file.type.startsWith('image/')) {
@@ -205,9 +209,9 @@ function previewImages(input) {
 function enableAutoSave(formId) {
   const form = document.getElementById(formId);
   if (!form) return;
-  
+
   const inputs = form.querySelectorAll('input, select, textarea');
-  
+
   inputs.forEach(input => {
     input.addEventListener('input', debounce(() => {
       const formData = new FormData(form);
@@ -215,7 +219,7 @@ function enableAutoSave(formId) {
       localStorage.setItem(`autosave_${formId}`, JSON.stringify(data));
     }, 1000));
   });
-  
+
   const savedData = localStorage.getItem(`autosave_${formId}`);
   if (savedData) {
     const data = JSON.parse(savedData);
@@ -237,7 +241,7 @@ function enableAutoSave(formId) {
  */
 function initializeSocketIO() {
   const userId = document.body.getAttribute('data-user-id');
-  
+
   if (!userId) {
     console.log('No user ID found, skipping Socket.IO initialization.');
     return;
@@ -266,7 +270,7 @@ function initializeSocketIO() {
  * Fetches the unread message count from the server and updates the badge.
  */
 async function updateUnreadMessageCount() {
-  const notificationBadge = document.getElementById('message-notification-badge');
+  const notificationBadge = document.getElementById('notification-badge'); // Changed this ID
   if (!notificationBadge) return;
 
   try {
@@ -275,7 +279,7 @@ async function updateUnreadMessageCount() {
       throw new Error('Failed to fetch unread message count.');
     }
     const data = await response.json();
-    
+
     if (data.count > 0) {
       notificationBadge.textContent = data.count;
       notificationBadge.style.display = 'block';
@@ -295,7 +299,7 @@ async function updateUnreadMessageCount() {
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Socket.IO for real-time features
   initializeSocketIO();
-  
+
   // Call the function on page load to set the initial count
   updateUnreadMessageCount();
 
@@ -304,9 +308,25 @@ document.addEventListener('DOMContentLoaded', () => {
   if (main) {
     main.classList.add('fade-in');
   }
-  
+
   // Handle mobile menu clicks
-  document.querySelector('.mobile-menu-toggle')?.addEventListener('click', toggleMobileMenu);
+  document.querySelector('.mobile-menu-toggle')?.addEventListener('click', () => {
+    const nav = document.getElementById('nav');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    nav.classList.toggle('nav-active');
+    mobileMenuToggle.classList.toggle('open');
+  });
+
+  // Optional: Close menu when a link is clicked
+  const navLinks = document.querySelectorAll('.nav a');
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      const nav = document.getElementById('nav');
+      const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+      nav.classList.remove('nav-active');
+      mobileMenuToggle.classList.remove('open');
+    });
+  });
 
   // Initialize search functionality if a search input is present
   const searchInput = document.getElementById('search-input');
@@ -321,16 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', searchFunction);
   }
 
-  // --- FIX IS HERE ---
   // Form validation on submit
   document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', function(e) {
-      // Pass the form element itself to the validateForm function
       if (!validateForm(this)) {
-        // Prevent the form from submitting if validation fails
         e.preventDefault();
       }
-      // If validation passes, the form will submit normally
     });
   });
 
@@ -343,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Enable auto-save for profile forms
   enableAutoSave('profile-form');
-  
+
   // Add smooth scrolling for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {

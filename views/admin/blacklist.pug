@@ -9,7 +9,8 @@ block content
     .blacklist-actions
       button.btn.btn-primary(onclick="toggleAddForm()") Add to Blacklist
     
-    .add-form-container(id="add-form", style="display: none;")
+    // The form is hidden by default using a CSS class.
+    .add-form-container(id="add-form", class="hidden")
       .form-card
         h3 Add User to Blacklist
         form.blacklist-form(action="/admin/blacklist", method="POST")
@@ -36,9 +37,11 @@ block content
                 p.blacklist-mobile Mobile: #{entry.mobile}
                 p.blacklist-reason= entry.reason
                 .blacklist-meta
-                  span.blacklist-date Added: #{entry.addedAt.toLocaleDateString()}
+                  // This line handles potential missing dates to prevent errors.
+                  span.blacklist-date Added: #{entry.addedAt ? entry.addedAt.toLocaleDateString() : 'N/A'}
               .blacklist-actions
-                button.btn.btn-danger.btn-sm(onclick=`removeFromBlacklist(${entry.id})`) Remove
+                // This button now triggers the password prompt when clicked.
+                button.btn.btn-danger.btn-sm(onclick=`removeFromBlacklist('${entry._id}')`) Remove
       else
         .empty-state
           .empty-icon 🎉
@@ -47,20 +50,33 @@ block content
 
 block scripts
   script.
+    // This function toggles the form's visibility.
     function toggleAddForm() {
       const form = document.getElementById('add-form');
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      form.classList.toggle('hidden');
     }
     
+    // This function handles the password and sends it to the server.
     async function removeFromBlacklist(id) {
       if (confirm('Are you sure you want to remove this user from the blacklist?')) {
+        const password = prompt("Please enter the admin password to confirm deletion:");
+        if (!password) {
+          return; 
+        }
+
         try {
           const response = await fetch(`/admin/blacklist/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password })
           });
           
           if (response.ok) {
             location.reload();
+          } else if (response.status === 401) {
+            alert('Incorrect password. Deletion failed.');
           } else {
             alert('Error removing user from blacklist');
           }

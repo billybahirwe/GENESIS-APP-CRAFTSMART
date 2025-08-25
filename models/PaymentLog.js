@@ -1,83 +1,74 @@
 // ./models/PaymentLog.js
-const db = require('../config/database');
 
-class PaymentLog {
-  /**
-   * Creates a new log entry for a payment transaction.
-   * @param {object} logData - The data for the log entry.
-   * @param {string} logData.transactionId - The ID of the transaction.
-   * @param {string} logData.action - The action being logged (e.g., 'INITIATE', 'WEBHOOK_UPDATE', 'ERROR').
-   * @param {string} logData.status - The status of the transaction at the time of logging.
-   * @param {object} logData.requestData - The raw request data from the API call.
-   * @param {object} logData.responseData - The raw response data from the API call.
-   * @param {string} [logData.errorMessage] - An optional error message.
-   * @returns {Promise<object>} The newly created payment log record.
-   */
-  static async create(logData) {
-    const {
-      transactionId,
-      action,
-      status,
-      requestData,
-      responseData,
-      errorMessage
-    } = logData;
+const mongoose = require('mongoose');
 
-    const query = `
-      INSERT INTO payment_logs (
-        transaction_id, action, status, request_data, 
-        response_data, error_message
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `;
-
-    const values = [
-      transactionId,
-      action,
-      status,
-      requestData ? JSON.stringify(requestData) : null,
-      responseData ? JSON.stringify(responseData) : null,
-      errorMessage
-    ];
-
-    try {
-      const result = await db.query(query, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('❌ Error creating payment log:', error);
-      throw error;
+// Define the schema for the PaymentLog model
+const paymentLogSchema = new mongoose.Schema({
+    transactionId: {
+        type: String,
+        required: true,
+        index: true // Indexing this field for faster queries
+    },
+    action: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        required: true
+    },
+    requestData: {
+        type: mongoose.Schema.Types.Mixed, // Use Mixed type for flexible JSON data
+        required: false
+    },
+    responseData: {
+        type: mongoose.Schema.Types.Mixed, // Use Mixed type for flexible JSON data
+        required: false
+    },
+    errorMessage: {
+        type: String,
+        required: false
     }
-  }
+}, {
+    timestamps: true // Adds createdAt and updatedAt fields
+});
 
-  static async getLogsByTransaction(transactionId) {
-    const query = `
-      SELECT * FROM payment_logs 
-      WHERE transaction_id = $1 
-      ORDER BY created_at DESC
-    `;
-    try {
-      const result = await db.query(query, [transactionId]);
-      return result.rows;
-    } catch (error) {
-      console.error('❌ Error fetching payment logs:', error);
-      throw error;
-    }
-  }
+// Create the Mongoose model from the schema
+const PaymentLog = mongoose.model('PaymentLog', paymentLogSchema);
 
-  static async getLogs(limit = 100, offset = 0) {
-    const query = `
-      SELECT * FROM payment_logs
-      ORDER BY created_at DESC
-      LIMIT $1 OFFSET $2
-    `;
+// Define static methods on the model for common queries
+PaymentLog.createLog = async function(logData) {
     try {
-      const result = await db.query(query, [limit, offset]);
-      return result.rows;
+        const newLog = await this.create(logData);
+        console.log('✅ Payment log created for transaction:', newLog.transactionId);
+        return newLog;
     } catch (error) {
-      console.error('❌ Error fetching all payment logs:', error);
-      throw error;
+        console.error('❌ Error creating payment log:', error);
+        throw error;
     }
-  }
-}
+};
+
+PaymentLog.getLogsByTransaction = async function(transactionId) {
+    try {
+        const logs = await this.find({ transactionId }).sort({ createdAt: -1 });
+        return logs;
+    } catch (error) {
+        console.error('❌ Error fetching payment logs:', error);
+        throw error;
+    }
+};
+
+PaymentLog.getLogs = async function(limit = 100, offset = 0) {
+    try {
+        const logs = await this.find()
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit);
+        return logs;
+    } catch (error) {
+        console.error('❌ Error fetching all payment logs:', error);
+        throw error;
+    }
+};
 
 module.exports = PaymentLog;

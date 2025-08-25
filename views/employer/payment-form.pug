@@ -1,226 +1,222 @@
 doctype html
-html
-  head
-    meta(charset='UTF-8')
-    meta(name='viewport' content='width=device-width, initial-scale=1.0')
-    title Simple Payments Form
-    // Simple inline CSS for basic styling
-    style.
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  title Simple Payments Form
+  // Simple inline CSS for basic styling
+  style.
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="tel"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .payment-options {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .payment-options label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      flex: 1;
+      text-align: center;
+      transition: border-color 0.3s ease;
+    }
+    .payment-options input[type="radio"] {
+      display: none;
+    }
+    .payment-options input[type="radio"]:checked + label {
+      border-color: #007bff;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 300px;
+      text-align: center;
+      border-radius: 8px;
+    }
+    .close-btn {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close-btn:hover, .close-btn:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .button-link {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #6c757d;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      text-align: center;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .button-link:hover {
+      background-color: #5a6268;
+    }
+.container
+  h2 New Transaction
+  form#paymentForm
+    input(type='hidden' name='caseId' value='123456789')
+    input(type='hidden' name='employerId' value='1')
+    input(type='hidden' name='craftsmanId' value='1')
+    .form-group
+      label(for='employerPhone') Employer&apos;s Phone Number
+      input#employerPhone(type='tel' name='employerPhone' placeholder='e.g., 0700123456' required='')
+    .form-group
+      label(for='craftsmanPhone') Craftsman&apos;s Phone Number
+      input#craftsmanPhone(type='tel' name='craftsmanPhone' placeholder='e.g., 0700123456' required='')
+    .form-group
+      label(for='totalAmount') Amount (UGX)
+      input#totalAmount(type='number' name='totalAmount' placeholder='e.g., 50000' required='')
+    .payment-options
+      input#mtn(type='radio' name='paymentMethod' value='mtn' checked='' required='')
+      label(for='mtn') MTN MoMo
+      input#airtel(type='radio' name='paymentMethod' value='airtel' required='')
+      label(for='airtel') Airtel Money
+    button#submitBtn(type='submit') Process Transfer
+  .form-group
+    a.button-link(href='/employer/dashboard') Back to Dashboard
+  #modal.modal
+    .modal-content
+      span.close-btn &times;
+      h3#modalTitle
+      p#modalMessage
+      button#modalCloseBtn OK
+script.
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('paymentForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const showModal = (title, message) => {
+      modalTitle.textContent = title;
+      modalMessage.textContent = message;
+      modal.style.display = 'block';
+    };
+    const hideModal = () => {
+      modal.style.display = 'none';
+    };
+    modalCloseBtn.addEventListener('click', hideModal);
+    window.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        hideModal();
       }
-      .container {
-        background-color: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 400px;
+    });
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      data.craftsmanPhone = document.getElementById('craftsmanPhone').value;
+      const phoneRegex = /^(?:0)?7[0-9]{8}$/;
+      if (!phoneRegex.test(data.employerPhone) || !phoneRegex.test(data.craftsmanPhone)) {
+        showModal('Error', 'Please enter a valid Ugandan phone number starting with 07 for both fields.');
+        return;
       }
-      h2 {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #333;
-      }
-      .form-group {
-        margin-bottom: 15px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        color: #555;
-      }
-      input[type="tel"], input[type="number"] {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
-      }
-      .payment-options {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-      }
-      .payment-options label {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        cursor: pointer;
-        padding: 10px;
-        border: 2px solid #ddd;
-        border-radius: 6px;
-        flex: 1;
-        text-align: center;
-        transition: border-color 0.3s ease;
-      }
-      .payment-options input[type="radio"] {
-        display: none;
-      }
-      .payment-options input[type="radio"]:checked + label {
-        border-color: #007bff;
-      }
-      button {
-        width: 100%;
-        padding: 12px;
-        background-color: #007bff;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: background-color 0.3s ease;
-        margin-bottom: 10px; /* Added spacing for the new button */
-      }
-      button:hover {
-        background-color: #0056b3;
-      }
-      .modal {
-        display: none;
-        position: fixed;
-        z-index: 1;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.4);
-      }
-      .modal-content {
-        background-color: #fefefe;
-        margin: 15% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 300px;
-        text-align: center;
-        border-radius: 8px;
-      }
-      .close-btn {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-      }
-      .close-btn:hover, .close-btn:focus {
-        color: black;
-        text-decoration: none;
-        cursor: pointer;
-      }
-      /* Added a new style for the link to make it look like a button */
-      .button-link {
-        display: block;
-        width: 100%;
-        padding: 12px;
-        background-color: #6c757d;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        text-align: center;
-        text-decoration: none;
-        transition: background-color 0.3s ease;
-        
-      }
-      .button-link:hover {
-        background-color: #5a6268;
-      }
-  
-  body
-    .container
-      h2 New Transaction
-      // Corrected form with method="post"
-      form#paymentForm(method="post" action="/api/payment/initiate")
-        input(type='hidden' name='caseId' value='123456789')
-        input(type='hidden' name='employerId' value='1')
-        input(type='hidden' name='craftsmanId' value='1')
-        .form-group
-          label(for='employerPhone') Employer's Phone Number
-          input#employerPhone(type='tel' name='employerPhone' placeholder='e.g., 0700123456' required='')
-        .form-group
-          label(for='totalAmount') Amount (UGX)
-          input#totalAmount(type='number' name='totalAmount' placeholder='e.g., 50000' required='')
-        .payment-options
-          input#mtn(type='radio' name='paymentMethod' value='mtn' checked='' required='')
-          label(for='mtn') MTN MoMo
-          input#airtel(type='radio' name='paymentMethod' value='airtel' required='')
-          label(for='airtel') Airtel Money
-        button#submitBtn(type='submit') Process Transfer
-      
-      // Moved the button link inside a .form-group to align it properly
-      .form-group
-        a(href="/employer/dashboard" class="button-link") Back to Dashboard
-
-      #modal.modal
-        .modal-content
-          span.close-btn &times;
-          h3#modalTitle
-          p#modalMessage
-          button#modalCloseBtn OK
-    script.
-      document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('paymentForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const modalCloseBtn = document.getElementById('modalCloseBtn');
-        const showModal = (title, message) => {
-          modalTitle.textContent = title;
-          modalMessage.textContent = message;
-          modal.style.display = 'block';
-        };
-        const hideModal = () => {
-          modal.style.display = 'none';
-        };
-        modalCloseBtn.addEventListener('click', hideModal);
-        window.addEventListener('click', (event) => {
-          if (event.target === modal) {
-            hideModal();
-          }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing...';
+      try {
+        // CORRECTION: The fetch URL has been updated to match the new backend route.
+        const response = await fetch('/api/payment/initiate-mobile-money', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
         });
-        form.addEventListener('submit', async function (e) {
-          e.preventDefault();
-          const formData = new FormData(form);
-          const data = Object.fromEntries(formData.entries());
-          const phoneRegex = /^(?:0)?7[0-9]{8}$/;
-          if (!phoneRegex.test(data.employerPhone)) {
-            showModal('Error', 'Please enter a valid Ugandan phone number starting with 07.');
+        const result = await response.json();
+        if (response.ok) {
+          if (result.data && result.data.redirect_url) {
+            window.location.href = result.data.redirect_url;
             return;
           }
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Processing...';
-          try {
-            const response = await fetch('/api/payment/initiate', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (response.ok) {
-              if (result.data && result.data.redirect_url) {
-                window.location.href = result.data.redirect_url;
-                return;
-              }
-              showModal('Success', result.message || 'Payment initiated successfully. Please follow the prompts on your phone.');
-            } else {
-              showModal('Error', result.message || 'Failed to initiate payment. Please try again.');
-            }
-          } catch (error) {
-            console.error('Network error:', error);
-            showModal('Network Error', 'Could not connect to the server. Please check your internet connection.');
-          } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Process Transfer';
-          }
-        });
-      });
+          showModal('Success', result.message || 'Payment initiated successfully. Please follow the prompts on your phone.');
+        } else {
+          showModal('Error', result.message || 'Failed to initiate payment. Please try again.');
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        showModal('Network Error', 'Could not connect to the server. Please check your internet connection.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Process Transfer';
+      }
+    });
+  });

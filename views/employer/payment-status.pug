@@ -43,7 +43,7 @@ block content
 
         .p-6
           // Status Badge
-          .text-center.mb-6
+          .text-center.mb-6#statusContainer
             case transaction.status
               when 'PENDING'
                 .status-badge.bg-gray-100.text-gray-800
@@ -84,38 +84,47 @@ block content
             .grid.grid-cols-1.md:grid-cols-2.gap-4.text-sm
               div
                 span.font-medium.text-gray-600 Transaction ID:
-                p.text-gray-900.font-mono= transaction.transaction_id
+                p.text-gray-900.font-mono#transactionId= transaction.transaction_id
               div
                 span.font-medium.text-gray-600 Case ID:
-                p.text-gray-900 ##{transaction.case_id}
+                p.text-gray-900#caseId ##{transaction.case_id}
               div
                 span.font-medium.text-gray-600 Total Amount:
-                p.text-gray-900.font-semibold= formatCurrency(transaction.total_amount)
+                p.text-gray-900.font-semibold#totalAmount= formatCurrency(transaction.total_amount)
               div
                 span.font-medium.text-gray-600 Commission (10%):
-                p.text-gray-900= formatCurrency(transaction.commission_amount)
+                p.text-gray-900#commissionAmount= formatCurrency(transaction.commission_amount)
               div
                 span.font-medium.text-gray-600 Craftsman Amount (90%):
-                p.text-gray-900= formatCurrency(transaction.disbursement_amount)
+                p.text-gray-900#craftsmanAmount= formatCurrency(transaction.disbursement_amount)
               div
                 span.font-medium.text-gray-600 Payment Method:
-                p.text-gray-900.uppercase= transaction.payment_method
+                p.text-gray-900.uppercase#paymentMethod= transaction.payment_method
               div
                 span.font-medium.text-gray-600 Employer Phone:
-                p.text-gray-900= transaction.employer_phone
+                p.text-gray-900#employerPhone= transaction.employer_phone
               div
                 span.font-medium.text-gray-600 Craftsman Phone:
-                p.text-gray-900= transaction.craftsman_phone
+                p.text-gray-900#craftsmanPhone= transaction.craftsman_phone
               div
                 span.font-medium.text-gray-600 Created:
-                p.text-gray-900= formatDate(transaction.created_at)
+                p.text-gray-900#createdAt= formatDate(transaction.created_at)
               div
                 span.font-medium.text-gray-600 Last Updated:
-                p.text-gray-900= formatDate(transaction.updated_at)
+                p.text-gray-900#updatedAt= formatDate(transaction.updated_at)
+              if transaction.payment_reference
+                div
+                  span.font-medium.text-gray-600 Payment Reference:
+                  p.text-gray-900.font-mono#paymentReference= transaction.payment_reference
+              if transaction.disbursement_reference
+                div
+                  span.font-medium.text-gray-600 Disbursement Reference:
+                  p.text-gray-900.font-mono#disbursementReference= transaction.disbursement_reference
+
 
           // Payment Instructions
           if transaction.status === 'PAYMENT_REQUESTED'
-            .bg-blue-50.border.border-blue-200.p-4.rounded-lg.mb-6
+            .bg-blue-50.border.border-blue-200.p-4.rounded-lg.mb-6#paymentInstructions
               .flex.items-start.space-x-3
                 i.fas.fa-info-circle.text-blue-600.flex-shrink-0.mt-0.5
                 div
@@ -126,9 +135,9 @@ block content
 
           // Activity Log
           if logs && logs.length > 0
-            .bg-gray-50.rounded-lg.p-6
+            .bg-gray-50.rounded-lg.p-6#activityLogSection
               h3.text-lg.font-semibold.text-gray-800.mb-4 Activity Log
-              .space-y-3
+              .space-y-3#activityLogContainer
                 each log in logs
                   .flex.items-start.space-x-3.text-sm
                     case log.status
@@ -155,10 +164,117 @@ block content
 
 block scripts
   script.
-    // Auto-refresh page every 10 seconds if a transaction is in a pending state
-    const transactionStatus = '#{transaction.status}';
-    if (['PENDING', 'PAYMENT_REQUESTED', 'DISBURSEMENT_INITIATED'].includes(transactionStatus)) {
-      setTimeout(() => {
-        window.location.reload();
-      }, 10000);
+    // Helper function to format currency
+    function formatCurrency(amount) {
+      if (amount === undefined || amount === null) return 'N/A';
+      return `UGX ${new Intl.NumberFormat().format(amount)}`;
     }
+
+    // Helper function to format date
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+
+    // Helper function to get status badge classes and icon
+    function getStatusInfo(status) {
+      switch (status) {
+        case 'PENDING': return { classes: 'bg-gray-100 text-gray-800', icon: 'fas fa-clock' };
+        case 'PAYMENT_REQUESTED': return { classes: 'bg-blue-100 text-blue-800', icon: 'fas fa-mobile-alt' };
+        case 'SUCCESSFUL': return { classes: 'bg-green-100 text-green-800', icon: 'fas fa-check-circle' };
+        case 'PAYMENT_FAILED': return { classes: 'bg-red-100 text-red-800', icon: 'fas fa-times-circle' };
+        case 'DISBURSEMENT_INITIATED': return { classes: 'bg-yellow-100 text-yellow-800', icon: 'fas fa-arrow-right' };
+        case 'COMPLETED': return { classes: 'bg-green-100 text-green-800', icon: 'fas fa-check-circle' };
+        case 'DISBURSEMENT_FAILED': return { classes: 'bg-red-100 text-red-800', icon: 'fas fa-exclamation-triangle' };
+        default: return { classes: 'bg-gray-100 text-gray-800', icon: 'fas fa-question' };
+      }
+    }
+
+    // Helper function to get log icon
+    function getLogIcon(status) {
+      switch (status) {
+        case 'SUCCESSFUL': return 'fas fa-check-circle text-green-500';
+        case 'FAILED': return 'fas fa-times-circle text-red-500';
+        default: return 'fas fa-circle text-blue-500';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const transactionId = '#{transaction.transaction_id}';
+      const statusContainer = document.getElementById('statusContainer');
+      const paymentInstructions = document.getElementById('paymentInstructions');
+      const activityLogContainer = document.getElementById('activityLogContainer');
+
+      async function checkStatus() {
+        try {
+          const response = await fetch(`/api/transaction/${transactionId}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch transaction data.');
+          }
+          const data = await response.json();
+          const { transaction, logs } = data;
+
+          // Update Status Badge
+          const statusInfo = getStatusInfo(transaction.status);
+          statusContainer.innerHTML = `
+            <div class="status-badge ${statusInfo.classes}">
+              <i class="${statusInfo.icon} mr-1"></i>
+              | ${transaction.status.replace(/_/g, ' ')}
+            </div>
+          `;
+
+          // Update dynamic fields
+          document.getElementById('totalAmount').textContent = formatCurrency(transaction.total_amount);
+          document.getElementById('commissionAmount').textContent = formatCurrency(transaction.commission_amount);
+          document.getElementById('craftsmanAmount').textContent = formatCurrency(transaction.disbursement_amount);
+          if (document.getElementById('paymentReference')) {
+              document.getElementById('paymentReference').textContent = transaction.payment_reference || 'N/A';
+          }
+          if (document.getElementById('disbursementReference')) {
+              document.getElementById('disbursementReference').textContent = transaction.disbursement_reference || 'N/A';
+          }
+          document.getElementById('updatedAt').textContent = formatDate(transaction.updated_at);
+
+          // Update Activity Log
+          if (activityLogContainer) {
+              activityLogContainer.innerHTML = '';
+              logs.forEach(log => {
+                  const logElement = document.createElement('div');
+                  logElement.className = 'flex items-start space-x-3 text-sm';
+                  logElement.innerHTML = `
+                      <i class="${getLogIcon(log.status)} flex-shrink-0 mt-0.5"></i>
+                      <div>
+                          <p class="font-medium text-gray-900">${log.action.replace(/_/g, ' ')}</p>
+                          <p class="text-gray-600">${formatDate(log.created_at)}</p>
+                          ${log.error_message ? `<p class="text-red-600 text-xs mt-1">${log.error_message}</p>` : ''}
+                      </div>
+                  `;
+                  activityLogContainer.appendChild(logElement);
+              });
+          }
+
+
+          // Hide instructions if payment is not pending
+          if (transaction.status !== 'PAYMENT_REQUESTED' && paymentInstructions) {
+            paymentInstructions.style.display = 'none';
+          }
+          
+          // Stop polling if the transaction is in a final state
+          if (['SUCCESSFUL', 'COMPLETED', 'PAYMENT_FAILED', 'DISBURSEMENT_FAILED'].includes(transaction.status)) {
+            console.log('Transaction status is final. Stopping polling.');
+          } else {
+            setTimeout(checkStatus, 5000); // Poll again in 5 seconds
+          }
+        } catch (error) {
+          console.error('Error fetching transaction status:', error);
+          setTimeout(checkStatus, 10000); // Retry after a longer delay
+        }
+      }
+
+      // Start the polling process if the initial status is not final
+      const initialStatus = '#{transaction.status}';
+      if (['PENDING', 'PAYMENT_REQUESTED', 'DISBURSEMENT_INITIATED'].includes(initialStatus)) {
+        checkStatus();
+      }
+    });
