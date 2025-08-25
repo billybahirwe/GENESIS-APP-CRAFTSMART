@@ -185,7 +185,7 @@ body.homepage .main {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    animation: imageSlider 20s infinite; /* 4 images * 5 seconds each */
+    animation: imageSlider 40s infinite; /* 4 images * 10 seconds each */
     position: relative;
     
     /* Ensure no solid background color is applied directly to the hero section */
@@ -327,10 +327,17 @@ body.homepage .main {
     gap: 0.5rem;
 }
 
+/* Corrected Form Layout */
 .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap; /* Allows columns to wrap on new lines */
     gap: 1rem;
+    margin-bottom: 1rem; /* Added margin for better spacing between rows */
+}
+
+.form-col {
+    flex: 1; /* Makes each column take up equal space */
+    min-width: 250px;
 }
 
 .form-control {
@@ -340,6 +347,7 @@ body.homepage .main {
     font-size: 1rem;
     transition: border-color 0.2s;
     background-color: #fff;
+    width: 100%; /* Ensure inputs take up full column width */
 }
 
 .form-control:focus {
@@ -1256,7 +1264,11 @@ label {
         width: 100%;
     }
     .form-row {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        gap: 0;
+    }
+    .form-col {
+        min-width: 100%; /* Ensure columns take full width on mobile */
     }
     .profile-container {
         grid-template-columns: 1fr;
@@ -1379,17 +1391,14 @@ label {
     13. Image Slider Animation
     ======================================= */
 @keyframes imageSlider {
-    0% {
-        background-image: url('/img/craftsman backg.jpg');
-    }
     25% {
-        background-image: url('/img/craftsmart background.jpg');
+        background-image: url('/img/craft-backg.jpg');
     }
     50% {
         background-image: url('/img/impressed-young-african-american-builder-uniform-holding-roller-brush-isolated-blue-background.jpg');
     }
     75% {
-        background-image: url('/img/portrait-man-working-as-plumber (1).jpg');
+        background-image: url('/img/craftsmart background.jpg');
     }
     100% {
         background-image: url('/img/craftsman backg.jpg');

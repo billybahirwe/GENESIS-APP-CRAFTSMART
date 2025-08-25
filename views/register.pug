@@ -29,7 +29,7 @@ block content
 
         .form-group
           label(for="role") I am a:
-          select.form-control(id="role", name="role", required onchange="toggleRoleFields()")
+          select.form-control(id="role", name="role", required)
             option(value="") Select your role
             option(value="employer") Employer (Looking to hire)
             option(value="craftsman") Craftsman (Looking for work)
@@ -39,7 +39,7 @@ block content
           .form-row
             .form-col
               label(for='region' class='block mb-1 font-semibold') Region
-              select#region(name='region', required onchange='populateDistricts()', class='form-control')
+              select#region(name='region', required, class='form-control')
                 option(value='') Select Region
                 option(value='Central') Central
                 option(value='Eastern') Eastern
@@ -48,12 +48,12 @@ block content
 
             .form-col
               label(for='district' class='block mb-1 font-semibold') District
-              select#district(name='district', required onchange='populateCities()', class='form-control')
+              select#district(name='district', required, class='form-control')
                 option(value='') Select District
 
           .form-group
             label(for='city' class='block mb-1 font-semibold') City / Neighborhood
-            select#city(name='city', required class='form-control')
+            select#city(name='city', required, class='form-control')
               option(value='') Select City / Neighborhood
 
         //- EMPLOYER FIELDS
@@ -91,13 +91,11 @@ block content
               | I have worked on various projects including _______________. I take pride in delivering 
               | quality work and maintaining good communication with clients.
 
-        button.btn-submit(type="submit") Create Account
+        button.btn-primary.btn-full(type="submit") Create Account
 
-      .mt-6.text-center
-        a(href='/' class='text-blue-600 hover:underline') ← Back to Home
-
-    //- JavaScript
-    script.
+  //- JavaScript to handle form logic
+  script.
+    document.addEventListener('DOMContentLoaded', () => {
       const districts = {
         Central: {
           Kampala: ["Muyenga", "Lweza", "Kabalagala", "Munyonyo", "Ntinda", "Naguru", "Buziga", "Bugolobi", "Makindye", "Kololo", "Kansanga", "Kyambogo", "Rubaga", "Nakawa", "Bukoto", "Kamwokya", "Nsambya", "Bweyogerere", "Namugongo", "Kasubi", "Mutungo", "Kireka", "Mengo", "Kikoni"],
@@ -121,10 +119,15 @@ block content
         }
       };
 
+      const regionSelect = document.getElementById("region");
+      const districtSelect = document.getElementById("district");
+      const citySelect = document.getElementById("city");
+      const roleSelect = document.getElementById("role");
+      const employerFields = document.querySelector(".employer-fields");
+      const craftsmanFields = document.querySelector(".craftsman-fields");
+
       function populateDistricts() {
-        const region = document.getElementById("region").value;
-        const districtSelect = document.getElementById("district");
-        const citySelect = document.getElementById("city");
+        const region = regionSelect.value;
         districtSelect.innerHTML = '<option value="">Select District</option>';
         citySelect.innerHTML = '<option value="">Select City / Neighborhood</option>';
         if (region && districts[region]) {
@@ -138,9 +141,8 @@ block content
       }
 
       function populateCities() {
-        const region = document.getElementById("region").value;
-        const district = document.getElementById("district").value;
-        const citySelect = document.getElementById("city");
+        const region = regionSelect.value;
+        const district = districtSelect.value;
         citySelect.innerHTML = '<option value="">Select City / Neighborhood</option>';
         if (region && district && districts[region][district]) {
           districts[region][district].forEach(city => {
@@ -151,61 +153,20 @@ block content
           });
         }
       }
-
+      
       function toggleRoleFields() {
-        const role = document.getElementById("role").value;
-        document.querySelector(".employer-fields").classList.add("hidden");
-        document.querySelector(".craftsman-fields").classList.add("hidden");
-
+        const role = roleSelect.value;
+        employerFields.classList.add("hidden");
+        craftsmanFields.classList.add("hidden");
         if (role === "employer") {
-          document.querySelector(".employer-fields").classList.remove("hidden");
+          employerFields.classList.remove("hidden");
         } else if (role === "craftsman") {
-          document.querySelector(".craftsman-fields").classList.remove("hidden");
+          craftsmanFields.classList.remove("hidden");
         }
       }
 
-    //- CSS for basic layout
-    style.
-      .auth-card {
-        max-width: 750px;
-        margin: auto;
-        padding: 2rem;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      }
-      .form-row {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-      .form-col {
-        flex: 1 1 48%;
-        min-width: 250px;
-        margin-bottom: 1rem;
-      }
-      .form-group {
-        margin-bottom: 1rem;
-      }
-      .form-control {
-        width: 100%;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      .btn-submit {
-        width: 100%;
-        background: #444A6D;
-        color: white;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 5px;
-        font-weight: bold;
-        transition: background 0.3s ease;
-      }
-      .btn-submit:hover {
-        background: #1e40af;
-      }
-      .hidden {
-        display: none;
-      }
+      // Add event listeners
+      regionSelect.addEventListener('change', populateDistricts);
+      districtSelect.addEventListener('change', populateCities);
+      roleSelect.addEventListener('change', toggleRoleFields);
+    });
