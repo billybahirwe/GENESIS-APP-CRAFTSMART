@@ -12,8 +12,33 @@ block content
           input.form-control(type="tel", id="mobile", name="mobile", required, placeholder="Enter your mobile number")
         .form-group
           label(for="password") Password
-          input.form-control(type="password", id="password", name="password", required, placeholder="Enter your password")
+          .password-wrapper
+            input.form-control(type="password", id="password", name="password", required, placeholder="Enter your password")
+            i.toggle-password.far.fa-eye
+        .form-group.remember-me
+          // The checkbox and label are now on the same line
+          label.checkbox-container
+            input(type="checkbox", id="rememberMe", name="rememberMe")
+            span.checkmark
+            | Remember Me
         button.btn.btn-primary.btn-full(type="submit") Sign In
       .auth-footer
         p Don't have an account? 
           a(href="/register") Sign up here
+
+  script.
+    document.addEventListener('DOMContentLoaded', () => {
+      const togglePassword = document.querySelector('.toggle-password');
+      const passwordInput = document.getElementById('password');
+
+      if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', () => {
+          // Toggle the type attribute
+          const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          passwordInput.setAttribute('type', type);
+          
+          // Toggle the eye icon
+          togglePassword.classList.toggle('fa-eye-slash');
+        });
+      }
+    });

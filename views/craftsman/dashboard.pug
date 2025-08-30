@@ -1,3 +1,5 @@
+//- D:\GENESIS\GENESIS-APP-CRAFTSMART\project\views\craftsman\dashboard.pug
+
 extends ../layout
 
 block content
@@ -39,12 +41,14 @@ block content
                 p.job-description= job.description
                 .job-meta
                   span.job-location 📍 #{job.location}
-                  span.job-budget 💰 $#{job.budget.toLocaleString()}
+                  // Change from dollars to Ugandan Shillings
+                  span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                   span.job-category 🏷️ #{job.category}
                 .job-actions
-                  form.inline-form(action=`/craftsman/accept-job/${job.id}`, method="POST")
+                  form.inline-form(action=`/craftsman/apply-for-job/${job._id}`, method="POST")
                     button.btn.btn-primary.btn-sm(type="submit") Apply for Job
-                  button.btn.btn-secondary.btn-sm View Details
+                  // This is now a link to a new page to view job details
+                  a.btn.btn-secondary.btn-sm(href=`/craftsman/jobs/${job._id}`) View Details
         else
           .empty-state
             .empty-icon 📋
@@ -61,11 +65,12 @@ block content
               p.job-description= job.description
               .job-meta
                 span.job-location 📍 #{job.location}
-                span.job-budget 💰 $#{job.budget.toLocaleString()}
+                // Change from dollars to Ugandan Shillings
+                span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                 span.job-status(class=`status-${job.status}`)= job.status
               .job-actions
-                button.btn.btn-primary.btn-sm Contact Employer
-                button.btn.btn-secondary.btn-sm Update Status
+                a.btn.btn-primary.btn-sm(href=`/craftsman/contact-employer/${job.employerId}`) Contact Employer
+                a.btn.btn-secondary.btn-sm(href=`/craftsman/update-status/${job._id}`) Update Status
                 if job.status === 'SUCCESSFUL'
                   p.payment-status(style='color: #FFC107; font-weight: bold;') Employer has paid. Funds pending release.
                 else if job.status === 'COMPLETED'

@@ -25,7 +25,9 @@ block content
 
           .form-col
             label(for="password") Password
-            input.form-control(type="password", id="password", name="password", required, placeholder="Choose a secure password")
+            .password-wrapper
+              input.form-control(type="password", id="password", name="password", required, placeholder="Choose a secure password")
+              i.toggle-password.far.fa-eye
 
         .form-group
           label(for="role") I am a:
@@ -165,8 +167,34 @@ block content
         }
       }
 
+      // Add password toggle logic
+      const togglePassword = document.querySelector('.toggle-password');
+      const passwordInput = document.getElementById('password');
+
+      if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', () => {
+          // Toggle the type attribute
+          const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          passwordInput.setAttribute('type', type);
+          
+          // Toggle the icon
+          togglePassword.classList.toggle('fa-eye-slash');
+        });
+      }
+
       // Add event listeners
       regionSelect.addEventListener('change', populateDistricts);
       districtSelect.addEventListener('change', populateCities);
       roleSelect.addEventListener('change', toggleRoleFields);
+
+      // Call functions initially to handle pre-filled data
+      if (regionSelect.value) {
+        populateDistricts();
+      }
+      if (districtSelect.value) {
+        populateCities();
+      }
+      if (roleSelect.value) {
+        toggleRoleFields();
+      }
     });

@@ -1,0 +1,39 @@
+//- D:\GENESIS\GENESIS-APP-CRAFTSMART\project\views\craftsman\job-details.pug
+extends ../layout
+
+block content
+  // Link to the new CSS file
+  link(rel="stylesheet", href="/css/job-details.css")
+
+  .container
+    // Job Details Section
+    .job-details-container
+      // Title, Location, Budget
+      h1.job-title= job.title
+      .job-meta
+        span.job-location 📍 #{job.location}
+        span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
+
+      // Job Description and Details
+      .job-section
+        h2.section-title Description
+        p.job-description= job.description
+
+      // Images if available
+      if job.images && job.images.length > 0
+        .job-images
+          h2.section-title Job Photos
+          .image-grid
+            each image in job.images
+              .image-card
+                img.job-image(src=image, alt=`Image of ${job.title}`)
+
+      // Apply for Job button
+      // The form action will point to the POST route we created in app.js
+      .job-actions
+        form(action=`/craftsman/apply-for-job/${job._id}`, method="POST")
+          button.btn.btn-primary(type="submit") Apply for this Job
+
+    // Back button
+    .back-link
+      a(href="/craftsman/dashboard") ← Back to Jobs

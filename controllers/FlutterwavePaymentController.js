@@ -1,52 +1,62 @@
-// This file has been updated to fix schema field name mismatches and resolve a validation error.
+const dotenv = require('dotenv');
+const { v4: uuidv4 } = require('uuid');
+const Flutterwave = require('flutterwave-node-v3');
+const mongoose = require('mongoose');
+const crypto = require('crypto');
 
-import dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
-import Flutterwave from 'flutterwave-node-v3';
-import mongoose from 'mongoose';
-import crypto from 'crypto';
-
-// Import our new Mongoose models.
-import Transaction from '../models/Transaction.js';
-import PaymentLog from '../models/PaymentLog.js';
+const Transaction = require('../models/Transaction.js');
+const PaymentLog = require('../models/PaymentLog.js');
+const User = require('../models/user.js'); 
+const Job = require('../models/job.js'); 
 
 dotenv.config();
 
-// Initialize Flutterwave client with your API keys from .env
+// 🔎 Debug log to check if env variables are loaded
+
+console.log("🔑 FLW_PUBLIC_KEY from .env:", process.env.FLW_PUBLIC_KEY ? "✅ Loaded" : "❌ MISSING");
+console.log("🔑 FLW_SECRET_KEY from .env:", process.env.FLW_SECRET_KEY ? "✅ Loaded" : "❌ MISSING");
+console.log("🔑 APP_BASE_URL from .env:", process.env.APP_BASE_URL || "❌ MISSING");
+// Initialize Flutterwave client
 const flw = new Flutterwave(
   process.env.FLW_PUBLIC_KEY,
   process.env.FLW_SECRET_KEY,
 );
 
-/**
- * Controller function to initiate a Mobile Money payment.
- * It handles creating a transaction, calling the Flutterwave API,
- * and responding to the client with a redirect URL if available.
- */
-export const initiateMobileMoneyPayment = async (req, res) => {
+exports.initiateMobileMoneyPayment = async (req, res) => {
   try {
-    const { caseId, employerId, craftsmanId, totalAmount, paymentMethod, employerPhone, craftsmanPhone } = req.body;
+    const { caseId, totalAmount, paymentMethod, employerPhone } = req.body;
 
-    // 1. Basic input validation - CORRECTED TO CHECK ALL REQUIRED FIELDS
-    if (!totalAmount || !employerPhone || !paymentMethod || !craftsmanPhone || !caseId || !employerId || !craftsmanId) {
+    // Debug incoming request
+    console.log("📩 initiateMobileMoneyPayment request body:", req.body);
+
+    if (!totalAmount || !employerPhone || !paymentMethod || !caseId) {
       return res.status(400).json({ success: false, message: 'Missing required payment details.' });
     }
+    
+    if (!req.user) {
+      console.error('❌ User not authenticated in payment initiation route.');
+      return res.status(401).json({ success: false, message: 'User not authenticated.' });
+    }
 
-    // 2. Define payment constants and transaction reference
+    if (!mongoose.Types.ObjectId.isValid(caseId)) {
+      console.error(`❌ Invalid caseId provided: ${caseId}`);
+      return res.status(400).json({ success: false, message: 'Invalid job ID provided.' });
+    }
+    
     const tx_ref = uuidv4();
     const network = paymentMethod.toUpperCase();
-    const employer = { name: "SmartCraft Employer", email: "employer@smartcraft.com" };
-    const safeAmount = Math.min(parseFloat(totalAmount), 40000);
+    const safeAmount = parseFloat(totalAmount);
+    
+    const job = await Job.findById(caseId);
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found.' });
+    }
 
-    // 3. Find or create a new transaction in your database using Mongoose methods
     let transaction = await Transaction.findOne({ jobId: caseId });
     if (!transaction) {
-      // Use Mongoose's create method, ensuring the field names match the schema.
       transaction = await Transaction.create({
+        userId: req.user._id, 
         jobId: caseId,
-        // In a real app, this should come from a user authentication system.
-        userId: mongoose.Types.ObjectId.isValid(employerId) ? employerId : new mongoose.Types.ObjectId('60c72b2f9b1e8b0015b6b1a9'),
-        // CORRECTED: changed 'transaction_id' to 'transactionId' to match schema
         transactionId: tx_ref,
         total_amount: safeAmount,
         commission_amount: safeAmount * 0.1,
@@ -54,57 +64,46 @@ export const initiateMobileMoneyPayment = async (req, res) => {
         status: 'PENDING',
         payment_method: paymentMethod,
         employer_phone: employerPhone,
-        craftsman_phone: craftsmanPhone
+        craftsman_phone: job.craftsmanPhoneNumber || ''
       });
     } else {
-      // Update an existing transaction
       transaction.status = 'PENDING';
-      // CORRECTED: changed 'transaction_id' to 'transactionId' to match schema
-      transaction.transactionId = tx_ref; // Use the new tx_ref for the re-attempt
+      transaction.transactionId = tx_ref;
       await transaction.save();
     }
 
-    // 4. Call the Flutterwave Mobile Money API
+    // 🔎 Debug: Log before API call
+    console.log("🚀 Sending request to Flutterwave with tx_ref:", tx_ref);
+
     const response = await flw.MobileMoney.uganda({
       phone_number: employerPhone,
       network,
       amount: safeAmount,
       currency: 'UGX',
-      email: employer.email,
+      email: req.user.email,
       tx_ref,
-      fullname: employer.name,
-      redirect_url: 'https://your-app.com/payment/callback',
+      fullname: req.user.name,
+      redirect_url: `${process.env.APP_BASE_URL}/payment/status/${tx_ref}`,
     });
 
-    console.log("Flutterwave response:", response);
+    console.log("📡 Flutterwave raw response:", response);
 
-    // 5. Handle the Flutterwave response
-    if (response.status === 'success') {
+    if (response.status === 'success' && response.data.status === 'pending') {
       const flwRef = response.data?.flw_ref || response.data?.id || response.data?.tx_ref;
       const redirect_url = response.meta?.authorization?.redirect;
 
-      // Update the transaction status and reference in your database using Mongoose
-      // FIX: Your schema's 'status' enum does not contain 'PROCESSING'.
-      // Changed to 'PENDING' to prevent validation error. You should update your
-      // Transaction.js schema to include 'PROCESSING' for a more robust state.
-      transaction.status = 'PENDING'; 
-      // CORRECTED: changed 'flw_ref' to 'payment_reference' to match schema
+      transaction.status = 'INITIATED'; 
       transaction.payment_reference = flwRef;
       await transaction.save();
 
-      // Log the successful initiation and make sure to use the correct schema field name
       await PaymentLog.create({
-        // CORRECTED: changed 'transaction_id' to 'transactionId' to match schema
         transactionId: transaction.transactionId,
         action: 'FLUTTERWAVE_INITIATE',
         status: 'PROCESSING',
-        // CORRECTED: changed 'request_data' to 'requestData' to match schema
         requestData: req.body,
-        // CORRECTED: changed 'response_data' to 'responseData' to match schema
         responseData: response
       });
 
-      // Respond to the client, including the redirect URL if it exists
       return res.status(200).json({
         success: true,
         message: 'Payment initiated. Please follow the prompts on your phone.',
@@ -115,7 +114,7 @@ export const initiateMobileMoneyPayment = async (req, res) => {
         }
       });
     } else {
-      // Handle Flutterwave API error responses
+      await transaction.save();
       return res.status(400).json({
         success: false,
         message: response.message || 'Failed to initiate payment.',
@@ -124,86 +123,17 @@ export const initiateMobileMoneyPayment = async (req, res) => {
     }
 
   } catch (error) {
-    // 6. Handle network or other unexpected errors
-    console.error('Flutterwave payment error:', error);
+    console.error('❌ Flutterwave payment error:', error);
     if (req?.body?.caseId) {
       await PaymentLog.create({
-        // CORRECTED: changed 'transaction_id' to 'transactionId' to match schema
         transactionId: req.body.caseId,
         action: 'FLUTTERWAVE_ERROR',
         status: 'FAILED',
-        // CORRECTED: changed 'request_data' to 'requestData' to match schema
         requestData: req.body,
-        // CORRECTED: changed 'response_data' to 'responseData' to match schema
         responseData: null,
-        // CORRECTED: changed 'error_message' to 'errorMessage' to match schema
         errorMessage: error.message
       });
     }
     return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
-  }
-};
-
-/**
- * Controller function to handle webhook callbacks from Flutterwave.
- */
-export const handleWebhook = async (req, res) => {
-  // 1. Verify the webhook signature
-  const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET;
-  const signature = req.headers['verif-hash'];
-
-  if (!signature || signature !== secretHash) {
-    return res.status(401).end();
-  }
-
-  // 2. Get the event payload from the request body
-  const payload = req.body;
-  
-  if (payload.status === 'successful') {
-    const txRef = payload.tx_ref;
-
-    // 3. Find the transaction and update its status using Mongoose
-    try {
-      // CRITICAL CORRECTION: The schema does not have 'flw_ref'.
-      // It has 'payment_reference'. We must use that field to find the transaction.
-      const transaction = await Transaction.findOne({ payment_reference: txRef });
-      
-      if (transaction) {
-        transaction.status = 'COMPLETED';
-        // Add additional tracking fields for debugging
-        transaction.external_transaction_id = payload.id;
-        transaction.webhook_received_at = new Date();
-        await transaction.save();
-      }
-      console.log('✅ Successfully updated transaction status via webhook.');
-    } catch (error) {
-      console.error('❌ Error processing webhook:', error);
-    }
-  }
-
-  // Always send a 200 OK response to Flutterwave to confirm receipt of the webhook.
-  res.status(200).end();
-};
-
-/**
- * Controller function to manually verify a transaction status.
- */
-export const verifyTransaction = async (req, res) => {
-  try {
-    const { transactionId } = req.params;
-    
-    // Find the transaction using the Mongoose-compatible method.
-    const transaction = await Transaction.findByTransactionId(transactionId);
-
-    if (!transaction || !transaction.payment_reference) {
-      return res.status(404).json({ success: false, message: 'Transaction not found or not initiated.' });
-    }
-
-    const response = await flw.Transaction.verify({ id: transaction.payment_reference });
-
-    res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    console.error('Error verifying transaction:', error);
-    res.status(500).json({ success: false, message: 'Verification failed.' });
   }
 };

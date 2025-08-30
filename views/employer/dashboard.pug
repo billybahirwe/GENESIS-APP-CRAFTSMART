@@ -1,3 +1,5 @@
+//- D:\GENESIS\GENESIS-APP-CRAFTSMART\project\views\employer\dashboard.pug
+
 extends ../layout
 
 block content
@@ -20,13 +22,15 @@ block content
       .stat-card
         .stat-icon 💰
         .stat-info
-          .stat-number $#{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString()}
+          // Change the currency symbol and format the number for Ugandan Shillings
+          .stat-number UGX #{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString('en-UG', { useGrouping: true })}
           .stat-label Total Budget
     
     .dashboard-actions
       a.btn.btn-primary(href="/employer/post-job") Post New Job
       a.btn.btn-secondary(href="/employer/browse-craftsmen") Browse Craftsmen
-      a.btn.btn-primary(href="/employer/payment-form") Make Payment
+      // The general "Make Payment" button is removed because payment is now job-specific.
+      a.btn.btn-secondary(href="/employer/payment-records") View Payment Records
     
     .dashboard-section
       h2 Your Recent Jobs
@@ -38,17 +42,21 @@ block content
               p.job-description= job.description
               .job-meta
                 span.job-location 📍 #{job.location}
-                span.job-budget 💰 $#{job.budget.toLocaleString()}
+                // Change the currency symbol and format the number
+                span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                 span.job-status(class=`status-${job.status}`)= job.status
               .job-actions
                 if job.status === 'open'
-                  button.btn.btn-sm.btn-secondary View Applications
+                  // 💡 Corrected: This button is now a working link to view applications
+                  a.btn.btn-sm.btn-secondary(href=`/employer/applications/${job._id}`) View Applications
                 else if job.status === 'in-progress'
-                  button.btn.btn-sm.btn-primary Contact Craftsman
-                //- NEW: Show this button if the job has been paid but not yet disbursed to the craftsman
-                if job.status === 'SUCCESSFUL'
-                  form.inline-form(action=`/payment/disburse/${job.transaction_id}`, method="POST")
-                    button.btn.btn-sm.btn-success(type="submit") Release Funds
+                  // 💡 Corrected: Link updated to match the new route for deposits
+                  a.btn.btn-sm.btn-primary(href=`/employer/deposit-funds/${job._id}`) Make Payment
+                else if job.paymentStatus === 'paid-in-escrow'
+                  // 💡 Corrected: This button is now a working link to disburse funds.
+                  a.btn.btn-sm.btn-success(href=`/admin/payments/${job.transaction_id}`) Release Funds
+                else if job.paymentStatus === 'disbursed'
+                  button.btn.btn-sm.btn-secondary(disabled) Funds Disbursed
       else
         .empty-state
           .empty-icon 📋

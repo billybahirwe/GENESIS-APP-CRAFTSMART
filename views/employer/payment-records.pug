@@ -1,0 +1,90 @@
+extends ../layout.pug
+
+block head
+  link(rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap')
+  script(src='https://cdn.tailwindcss.com')
+  style.
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .break-words {
+      word-break: break-all;
+    }
+
+block content
+  .container.mx-auto.p-4(class='md:p-8')
+    h1.text-3xl.font-bold.mb-6.text-gray-800.text-center Payment Records
+
+    .bg-white.shadow-lg.rounded-lg.p-6.mb-8
+      h2.text-2xl.font-semibold.mb-4.text-indigo-600 Transfer In (Deposits)
+      .overflow-x-auto
+        if transferInRecords && transferInRecords.length > 0
+          table#transferInTable.min-w-full.bg-white.border.rounded-lg
+            thead
+              tr.bg-gray-100.text-gray-600.uppercase.text-sm.leading-normal
+                th.py-3.px-6.text-left Transaction ID
+                th.py-3.px-6.text-left Amount
+                th.py-3.px-6.text-left Status
+                th.py-3.px-6.text-left Date
+            tbody.text-gray-600.text-sm.font-light
+              each record in transferInRecords
+                tr(id=`record-${record._id}` class='border-b border-gray-200 hover:bg-gray-100')
+                  td.py-3.px-6.text-left
+                    span.font-medium.break-words #{record.transactionId}
+                  td.py-3.px-6.text-left
+                    span.font-medium #{formatCurrency(record.total_amount)}
+                  td.py-3.px-6.text-left
+                    - const statusClass = record.status === 'COMPLETED' || record.status === 'DISBURSEMENT_COMPLETED' ? 'bg-green-200 text-green-600' : record.status === 'PENDING' || record.status === 'DISBURSEMENT_INITIATED' ? 'bg-yellow-200 text-yellow-600' : 'bg-red-200 text-red-600';
+                    span(class=`text-xs font-bold px-2 py-1 rounded-full ${statusClass}`) #{record.status}
+                  td.py-3.px-6.text-left #{formatDate(record.createdAt)}
+        else
+          p.text-gray-500.p-4 No deposit records found.
+
+    .bg-white.shadow-lg.rounded-lg.p-6
+      h2.text-2xl.font-semibold.mb-4.text-indigo-600 Transfer Out (Disbursements)
+      .overflow-x-auto
+        if transferOutRecords && transferOutRecords.length > 0
+          table#transferOutTable.min-w-full.bg-white.border.rounded-lg
+            thead
+              tr.bg-gray-100.text-gray-600.uppercase.text-sm.leading-normal
+                th.py-3.px-6.text-left Transaction ID
+                th.py-3.px-6.text-left Amount
+                th.py-3.px-6.text-left Status
+                th.py-3.px-6.text-left Date
+            tbody.text-gray-600.text-sm.font-light
+              each record in transferOutRecords
+                tr(id=`record-${record._id}` class='border-b border-gray-200 hover:bg-gray-100')
+                  td.py-3.px-6.text-left
+                    span.font-medium.break-words #{record.transactionId}
+                  td.py-3.px-6.text-left
+                    span.font-medium #{formatCurrency(record.total_amount)}
+                  td.py-3.px-6.text-left
+                    - const statusClass = record.status === 'COMPLETED' || record.status === 'DISBURSEMENT_COMPLETED' ? 'bg-green-200 text-green-600' : record.status === 'PENDING' || record.status === 'DISBURSEMENT_INITIATED' ? 'bg-yellow-200 text-yellow-600' : 'bg-red-200 text-red-600';
+                    span(class=`text-xs font-bold px-2 py-1 rounded-full ${statusClass}`) #{record.status}
+                  td.py-3.px-6.text-left #{formatDate(record.createdAt)}
+        else
+          p.text-gray-500.p-4 No disbursement records found.
+
+block scripts
+  script(src='/socket.io/socket.io.js')
+  // Optional: client-side script for real-time updates
+  script.
+    const socket = io();
+    function formatCurrency(amount) {
+      if (typeof amount !== 'number') return amount;
+      return new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: 'UGX',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleString('en-UG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }

@@ -1,0 +1,81 @@
+extends ../layout.pug
+
+block content
+  .container
+    h2.form-title Make Payment for "#{job.title}"
+
+    .job-details-container
+      p.job-info-item
+        strong Job ID:
+        | #{job._id}
+      p.job-info-item
+        strong Amount Due:
+        | UGX #{job.budget}
+      p.job-info-item
+        strong Craftsman:
+        | #{craftsman.name}
+
+    if message
+      .alert.alert-danger #{message}
+
+    // 👇 Form no longer posts via fetch; Socket.IO handles payment
+    form#paymentForm
+      input(type='hidden' name='jobId' value=job._id)
+      input(type='hidden' name='amount' value=job.budget)
+      input(type='hidden' name='craftsmanId' value=craftsman._id)
+
+      .form-group
+        label(for="network") Choose Mobile Money Network
+        select#network.form-control(name="network" required)
+          option(value="") Select Network
+          option(value="MTN") MTN
+          option(value="AIRTEL") Airtel
+
+      .form-group
+        label(for='mobile_number') Your Mobile Money Number
+        input.form-control(
+          type='tel' 
+          id='mobile_number' 
+          name='mobile_number' 
+          placeholder='e.g., 07XXXXXXXX' 
+          required
+        )
+      
+      button.btn.btn-primary(type='submit') Pay UGX #{job.budget}
+
+    .form-links
+      a.btn.btn-secondary(href=`/employer/applications/${job._id}`) Back to Applications
+
+  // 👇 Client-side Socket.IO integration
+  script(src="/socket.io/socket.io.js")
+  script.
+    const socket = io();
+
+    // Optionally join a private room using user ID
+    socket.emit("join", "#{user._id}");
+
+    document.getElementById("paymentForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const jobId = this.jobId.value;
+      const amount = this.amount.value;
+      const mobile_number = this.mobile_number.value;
+
+      // Emit Socket.IO event to initiate payment
+      socket.emit("initiatePayment", {
+        jobId,
+        amount,
+        mobile_number,
+        userId: "#{user._id}"
+      });
+    });
+
+    // Listen for the payment link from the server
+    socket.on("paymentLink", (data) => {
+      if (data.success && data.link) {
+        window.location.href = data.link; // auto redirect to Flutterwave
+      } else {
+        alert(data.message || "Payment initiation failed");
+        console.error(data);
+      }
+    });

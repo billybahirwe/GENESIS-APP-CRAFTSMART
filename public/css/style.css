@@ -185,7 +185,7 @@ body.homepage .main {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    animation: imageSlider 40s infinite; /* 4 images * 10 seconds each */
+    animation: imageSlider 7s infinite; /* 4 images * 10 seconds each */
     position: relative;
     
     /* Ensure no solid background color is applied directly to the hero section */

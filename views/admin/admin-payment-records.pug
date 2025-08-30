@@ -1,0 +1,24 @@
+// views/payment-records.pug
+
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Real-time Payments
+    script(src="https://cdn.tailwindcss.com")
+    style.
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+      body { font-family: 'Inter', sans-serif; }
+
+  body.bg-gray-100.text-gray-800.p-6
+    div.max-w-4xl.mx-auto.bg-white.p-8.rounded-xl.shadow-lg
+      h1.text-3xl.font-bold.mb-6.text-gray-800 Real-time Payment Dashboard
+
+      // This is where our real-time data will be rendered
+      // The client-side JS will inject data here
+      div#records-container
+
+    // Link the Socket.IO client library and our custom script
+    script(src="/socket.io/socket.io.js")
+    script(src="/realtime-payments.js")

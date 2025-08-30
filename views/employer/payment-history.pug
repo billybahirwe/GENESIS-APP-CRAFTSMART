@@ -1,0 +1,25 @@
+// views/employer/payment-history.pug
+extends ../layout
+
+block content
+  .container
+    h1.my-4 Payment History
+    if payments.length > 0
+      table.table.table-striped
+        thead
+          tr
+            th Job Title
+            th Craftsman
+            th Amount
+            th Status
+            th Date
+        tbody
+          each payment in payments
+            tr
+              td= payment.jobId.title
+              td= payment.craftsmanId.name
+              td= `UGX ${payment.amount}`
+              td= payment.status
+              td= payment.createdAt.toLocaleDateString()
+    else
+      .alert.alert-info No payments recorded yet.

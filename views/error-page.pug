@@ -1,0 +1,8 @@
+extends layout
+
+block content
+  .container.d-flex.align-items-center.justify-content-center.text-center.min-vh-100
+    .error-card.bg-light.p-5.rounded.shadow-sm
+      h1.display-4.text-danger.mb-3 ❌ Oh no! An error occurred.
+      p.lead.mb-4= message
+      a.btn.btn-primary(href="/") Go Home

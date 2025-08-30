@@ -1,0 +1,17 @@
+// views/employer/payment-otp.pug
+extends ../layout
+
+block content
+  .container
+    h1 Verify Your Payment
+    p An OTP has been sent to your mobile phone number. Please enter it below to complete the transaction.
+
+    form#otpForm(action="/api/payment/verify-otp" method="POST")
+      input(type="hidden" name="tx_ref" value=tx_ref)
+      input(type="hidden" name="transaction_id" value=transaction_id)
+      
+      .form-group
+        label(for="otp") OTP
+        input#otp.form-control(type="text" name="otp" required)
+      
+      button.btn.btn-primary(type="submit") Verify OTP
