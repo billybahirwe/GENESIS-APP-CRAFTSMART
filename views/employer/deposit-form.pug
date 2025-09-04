@@ -14,6 +14,11 @@ block content
       p.job-info-item
         strong Craftsman:
         | #{craftsman.name}
+    
+    // ✅ New notification for the system fee
+    .alert.alert-info.mt-3
+      p.mb-0 A 10% system fee (UGX #{(job.budget * 0.10).toLocaleString('en-UG', { useGrouping: true })}) will be applied.
+      p.mb-0 The craftsman will receive a net amount of <strong>UGX #{(job.budget * 0.90).toLocaleString('en-UG', { useGrouping: true })}</strong> upon job completion.
 
     if message
       .alert.alert-danger #{message}
@@ -60,13 +65,19 @@ block content
       const jobId = this.jobId.value;
       const amount = this.amount.value;
       const mobile_number = this.mobile_number.value;
+      
+      // ✅ Calculate the fee and the craftsman's portion
+      const fee = amount * 0.10;
+      const craftsmanAmount = amount * 0.90;
 
-      // Emit Socket.IO event to initiate payment
+      // ✅ Emit Socket.IO event to initiate payment with the new amounts
       socket.emit("initiatePayment", {
         jobId,
         amount,
         mobile_number,
-        userId: "#{user._id}"
+        userId: "#{user._id}",
+        fee,
+        craftsmanAmount
       });
     });
 

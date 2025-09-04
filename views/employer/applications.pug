@@ -6,6 +6,10 @@ block content
       h1.applications-title Applications for "#{job.title}"
       p.applications-subtitle Review all submissions from craftsmen for this job.
     
+    .job-actions.mb-4
+      a.btn.btn-outline-primary.me-2(href=`/job/${job._id}`) View Job Post
+      a.btn.btn-outline-secondary(href=`/employer/edit-job/${job._id}`) Edit Job Post
+    
     .applications-list
       if applications.length > 0
         each application in applications
@@ -16,11 +20,9 @@ block content
                 a(href=`/craftsman/${application.craftsmanId._id}`) View Profile
             
             .application-status-container
-              // Display the application status
               span.application-status(class=`status-${application.status}`)= application.status
             
             .application-actions
-              //--- PENDING APPLICATIONS LOGIC ---
               if application.status === 'pending'
                 form.inline-form(action=`/api/applications/accept/${application._id}`, method="POST")
                   button.btn.btn-sm.btn-success(type="submit") Accept
@@ -28,21 +30,15 @@ block content
                 form.inline-form(action=`/api/applications/reject/${application._id}`, method="POST")
                   button.btn.btn-sm.btn-danger(type="submit") Reject
               
-              //--- ACCEPTED APPLICATIONS LOGIC ---
               else if application.status === 'accepted'
-                // Show "Accepted" label
                 span.btn.btn-sm.btn-success(disabled) Accepted
                 
-                // Nest the payment button logic correctly
                 if job.status === 'in-progress'
-                  // Show "Make Payment" button
                   a.btn.btn-sm.btn-primary.ml-2(href=`/payment/form?jobId=${job._id}&craftsmanId=${application.craftsmanId._id}`) Make Payment
                 else if job.status === 'paid-in-escrow'
-                  // Show "Release Payment" button
                   form.inline-form(action=`/api/payment/release/${job._id}`, method="POST")
                     button.btn.btn-sm.btn-info(type="submit") Release Payment
 
-              //--- REJECTED APPLICATIONS LOGIC ---
               else if application.status === 'rejected'
                 span.btn.btn-sm.btn-danger(disabled) Rejected
       

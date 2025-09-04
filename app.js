@@ -7,7 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const socketIo = require('socket.io');
-const axios = require('axios'); // Ensure axios is imported
+const axios = require('axios'); 
+const sharp = require('sharp');
 
 // --- Middleware and Configuration Imports ---
 const cors = require('cors');
@@ -52,7 +53,21 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
-
+// --- Configure Multer for File Uploads ---
+// This storage configuration will be used for the craftsman profile files.
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadsDir = path.join(__dirname, 'public/uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage }); // Define the 'upload' variable here.
 // --- Security and Payment Middleware (Integrated) ---
 app.use(helmet({
   contentSecurityPolicy: {
@@ -73,21 +88,8 @@ app.use(cors({
   credentials: true
 }));
 
-// --- Configure Multer for File Uploads (Existing) ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, 'public/uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage });
-
+// const upload = multer({ storage });
+const uploadTemp = multer({ dest: 'uploads/' });
 // --- Existing Middleware ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -128,39 +130,9 @@ const requireRole = (roles) => {
   };
 };
 
+app.locals.reports = [];
 // New middleware for admin only routes
 const requireAdmin = requireRole(['admin']);
-
-// --- Socket.IO Logic (Existing) ---
-io.on('connection', (socket) => {
-  console.log('A user connected with socket ID:', socket.id);
-  socket.on('join', (userId) => {
-    if (userId) {
-      socket.join(userId);
-      console.log(`User ${userId} joined their private room.`);
-    }
-  });
-  socket.on('sendMessage', async (message) => {
-    const { senderId, receiverId, content } = message;
-    if (!senderId || !receiverId || !content) {
-      return;
-    }
-    try {
-      const newMessage = new Message({ senderId, receiverId, content });
-      const savedMessage = await newMessage.save();
-      io.to(receiverId).emit('newMessage', {
-        senderId: savedMessage.senderId,
-        content: savedMessage.content,
-        timestamp: savedMessage.timestamp
-      });
-    } catch (err) {
-      console.error('Error saving message:', err);
-    }
-  });
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
-});
 
 // Helper function to format currency
 const formatCurrency = (amount) => {
@@ -172,6 +144,51 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+// 👇 New route to handle funds release to the craftsman
+app.post('/api/payment/release/:jobId', requireAuth, requireRole(['employer']), async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    // Populate the job with the craftsman's details
+    const job = await Job.findById(jobId).populate('craftsman');
+
+    if (!job || job.employer.toString() !== req.user._id.toString()) {
+      return res.status(404).send('Job not found or you are not the employer.');
+    }
+    
+    if (job.status !== 'paid-in-escrow') {
+      return res.status(400).send('Payment is not in escrow for this job.');
+    }
+    
+    // Perform the transfer of funds to the craftsman's account
+    // You will need to implement a transfer API call here, e.g., using Flutterwave's Transfers API
+    // The recipient details (bank name, account number) should be stored in the craftsman's profile
+    const transferResponse = await axios.post('https://api.flutterwave.com/v3/transfers', {
+        account_bank: job.craftsman.bank_name, // You will need to add this field to your user model
+        account_number: job.craftsman.bank_account, // Add this to your user model
+        amount: job.craftsmanAmount, // The net amount (90%) for the craftsman
+        currency: "UGX",
+        narration: `Payment for job: ${job.title}`,
+    }, {
+        headers: {
+            'Authorization': `Bearer YOUR_FLUTTERWAVE_SECRET_KEY` // Replace with your key
+        }
+    });
+
+    if (transferResponse.data.status === 'success') {
+      // Update job status to 'disbursed'
+      job.status = 'disbursed';
+      await job.save();
+
+      // Redirect or send success message
+      res.status(200).send('Funds have been successfully released to the craftsman.');
+    } else {
+      res.status(500).send('Transfer failed.');
+    }
+  } catch (error) {
+    console.error('Error releasing payment:', error);
+    res.status(500).send('Server error');
+  }
+});
 // Helper function to format date
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString('en-UG', {
@@ -283,19 +300,139 @@ app.get('/employer/dashboard', requireAuth, requireRole(['employer']), async (re
   const craftsmen = await User.find({ role: 'craftsman', approved: true });
   res.render('employer/dashboard', { user: req.user, jobs: userJobs, craftsmen, path: req.path });
 });
-app.get('/employer/post-job', requireAuth, requireRole(['employer']), (req, res) => { res.render('employer/post-job', { user: req.user, path: req.path }); });
-app.post('/employer/post-job', requireAuth, requireRole(['employer']), upload.array('images', 5), async (req, res) => {
-  const { title, description, location, budget, category } = req.body;
-  const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
-  const newJob = new Job({ title, description, location, budget: parseFloat(budget), employerId: req.user._id, category, images });
-  try {
-    await newJob.save();
-    res.redirect('/employer/dashboard');
-  } catch (err) {
-    console.error('Error posting job:', err);
-    res.status(500).send('An error occurred while posting the job.');
-  }
+
+// Define a placeholder route for the employer dashboard to handle redirects
+app.get('/employer/dashboard', (req, res) => {
+    res.send('Employer Dashboard. Your report has been submitted successfully.');
 });
+
+// The route to handle the report submission
+app.post('/employer/report-problem', async (req, res) => {
+    try {
+        // Retrieve data from the form body.
+        const { craftsmanName, reportSubject, reportMessage } = req.body;
+        
+        // Basic validation to ensure the fields are not empty.
+        if (!craftsmanName || !reportSubject || !reportMessage) {
+            console.error('Validation Error: All fields are required for the report.');
+            return res.status(400).send('All fields are required.');
+        }
+
+        // Create the report data object.
+        const reportData = {
+            // Placeholder ID for now. In a real app, this would be `req.user.id`.
+            employerId: 'sample-employer-id-123', 
+            craftsmanName,
+            reportSubject,
+            reportMessage,
+            timestamp: new Date()
+        };
+
+        // Add the new report to our in-memory array.
+        app.locals.reports.push(reportData);
+
+        console.log('New report submitted:', reportData);
+
+        // Redirect the user back to their dashboard with a success message.
+        res.redirect('/employer/dashboard?success=report-submitted');
+
+    } catch (error) {
+        console.error('Error submitting report:', error);
+        res.status(500).send('Internal Server Error. Please try again later.');
+    }
+});
+
+// New route for the Admin Reports page
+app.get('/admin/reports-message', (req, res) => {
+    // The path 'admin/reports-message' tells Express to look for the file
+    // at `./views/admin/reports-message.pug`
+    res.render('admin/reports-message', { reports: app.locals.reports });
+});
+
+// New route for the Admin Reports page
+app.get('/admin/reports-message', (req, res) => {
+    // Pass the reports data from our in-memory array to the Pug template.
+    res.render('admin/reports-message', { reports: app.locals.reports });
+});
+
+// --- BEGIN CHANGES ---
+
+// Configure multer to save files temporarily
+
+app.get('/employer/post-job', requireAuth, requireRole(['employer']), (req, res) => {
+  res.render('employer/post-job', { user: req.user, path: req.path });
+});
+
+// This route processes the form submission, including image resizing.
+
+// --- Helper: safe async delete with retry if file is busy
+function safeDelete(filePath, retries = 3) {
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      if (err.code === 'EBUSY' && retries > 0) {
+        console.warn(`⚠️ File busy, retrying in 100ms: ${filePath}`);
+        setTimeout(() => safeDelete(filePath, retries - 1), 100);
+      } else {
+        console.error(`❌ Error deleting file: ${filePath}`, err.message);
+      }
+    } else {
+      console.log(`✅ File deleted: ${filePath}`);
+    }
+  });
+}
+
+// --- POST route for employer to post a job
+app.post(
+  '/employer/post-job',
+  requireAuth,
+  requireRole(['employer']),
+  uploadTemp.array('images', 10),
+  async (req, res) => {
+    const { title, description, location, budget, category } = req.body;
+    const uploadedFiles = req.files;
+    const processedImages = [];
+    
+    const uploadDir = path.join(__dirname, 'public', 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    try {
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const uniqueFileName = `${Date.now()}-${path.basename(file.originalname)}`;
+          const newFilePath = path.join(uploadDir, uniqueFileName);
+
+          await sharp(file.path)
+            .resize({ width: 800, height: 600, fit: sharp.fit.inside, withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toFile(newFilePath);
+
+          processedImages.push(`/uploads/${uniqueFileName}`);
+
+          // Delete temp file safely
+          safeDelete(file.path);
+        }
+      }
+
+      const newJob = new Job({
+        title,
+        description,
+        location,
+        budget: parseFloat(budget),
+        employerId: req.user._id,
+        category,
+        images: processedImages
+      });
+
+      await newJob.save();
+      res.redirect('/employer/dashboard');
+
+    } catch (err) {
+      console.error('Error posting job:', err);
+      res.status(500).send('An error occurred while posting the job.');
+    }
+  }
+);
+
 app.get('/employer/browse-craftsmen', requireAuth, requireRole(['employer']), async (req, res) => {
   const craftsmen = await User.find({ role: 'craftsman', approved: true });
   res.render('employer/browse-craftsmen', { user: req.user, craftsmen, path: req.path });
@@ -344,7 +481,151 @@ app.get('/employer/payment-records', requireAuth, requireRole(['employer']), asy
   }
 });
 
+// Route to view a single job post (accessible to all authenticated users)
+app.get('/job/:id', requireAuth, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id).populate('employerId', 'name');
+    if (!job) {
+      return res.status(404).render('error', { message: 'Job not found.' });
+    }
+    // Render the job-details.pug template with the job data
+    res.render('craftsman/job-details', { job, user: req.user, path: req.path });
+  } catch (err) {
+    console.error('Error fetching job details:', err);
+    res.status(500).send('An error occurred while fetching job details.');
+  }
+});
 
+// Route to view a single job post (accessible to all authenticated users)
+app.get('/job/:id', requireAuth, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id).populate('employerId', 'name');
+    if (!job) {
+      return res.status(404).render('error', { message: 'Job not found.' });
+    }
+    res.render('craftsman/job-details', { job, user: req.user, path: req.path });
+  } catch (err) {
+    console.error('Error fetching job details:', err);
+    res.status(500).send('An error occurred while fetching job details.');
+  }
+});
+
+// Route to render the edit job page for an employer
+app.get('/employer/edit-job/:id', requireAuth, requireRole(['employer']), async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).render('error', { message: 'Job not found.' });
+    }
+    if (job.employerId.toString() !== req.user._id.toString()) {
+      return res.status(403).send('You do not have permission to edit this job.');
+    }
+    res.render('employer/edit-job', { job, user: req.user, path: req.path });
+  } catch (err) {
+    console.error('Error fetching job for edit:', err);
+    res.status(500).send('An error occurred while fetching the job.');
+  }
+});
+
+
+// Route to handle the form submission for editing a job
+// Route for employers to view all job listings (read-only)
+app.get('/employer/all-jobs', requireAuth, requireRole(['employer']), async (req, res) => {
+  try {
+    // Fetch all jobs from the database, sorted by the most recent
+    const jobs = await Job.find({}).sort({ createdAt: -1 }).lean();
+
+    // Render the new template with the job data
+    res.render('employer/all-jobs', {
+      user: req.user,
+      jobs: jobs,
+      path: req.path
+    });
+  } catch (err) {
+    console.error('Error fetching all jobs for employer:', err);
+    res.status(500).send('An error occurred while fetching job listings.');
+  }
+});
+// Route to handle the form submission for editing a job
+app.post('/employer/edit-job/:id', requireAuth, requireRole(['employer']), uploadTemp.array('images', 10), async (req, res) => {
+  const { title, description, location, budget, category, imagesToDelete } = req.body;
+  const uploadedFiles = req.files;
+  const uploadDir = path.join(__dirname, 'public', 'uploads');
+
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).send('Job not found.');
+    }
+    if (job.employerId.toString() !== req.user._id.toString()) {
+      return res.status(403).send('You do not have permission to edit this job.');
+    }
+    
+    let updatedImages = job.images || [];
+
+    // Handle deletion of existing images
+    if (imagesToDelete && imagesToDelete.length > 0) {
+      updatedImages = job.images.filter(img => {
+        const shouldDelete = imagesToDelete.includes(img);
+        if (shouldDelete) {
+          const imagePath = path.join(__dirname, 'public', img);
+          if (fs.existsSync(imagePath)) {
+            // Add a small delay to ensure the file is not busy
+            setTimeout(() => {
+              try {
+                fs.unlinkSync(imagePath);
+                console.log(`Successfully deleted old image: ${imagePath}`);
+              } catch (err) {
+                console.error(`Failed to delete old image ${imagePath}:`, err);
+              }
+            }, 100);
+          }
+        }
+        return !shouldDelete;
+      });
+    }
+
+    // Process newly uploaded images
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      for (const file of uploadedFiles) {
+        const uniqueFileName = `${Date.now()}-${path.basename(file.originalname)}`;
+        const newFilePath = path.join(uploadDir, uniqueFileName);
+
+        await sharp(file.path)
+          .resize({ width: 800, height: 600, fit: sharp.fit.inside, withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toFile(newFilePath);
+
+        updatedImages.push(`/uploads/${uniqueFileName}`);
+        
+        // Add a small delay before deleting the temporary file
+        setTimeout(() => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`Successfully deleted temporary file: ${file.path}`);
+          } catch (err) {
+            console.error(`Failed to delete temporary file ${file.path}:`, err);
+          }
+        }, 100);
+      }
+    }
+
+    // Update job with new image list and other fields
+    job.title = title;
+    job.description = description;
+    job.location = location;
+    job.budget = parseFloat(budget);
+    job.category = category;
+    job.images = updatedImages;
+    
+    await job.save();
+    res.redirect('/employer/dashboard');
+
+  } catch (err) {
+    console.error('Error updating job:', err);
+    res.status(500).send('An error occurred while updating the job.');
+  }
+});
 app.get('/employer/applications/:jobId', requireAuth, requireRole(['employer']), async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -491,72 +772,11 @@ app.post('/api/applications/reject/:applicationId', requireAuth, requireRole(['e
       res.status(500).send('Server error');
     }
 });
-// --- Route to initiate a payment via Flutterwave API ---
-// app.post('/api/payment/initiate', requireAuth, requireRole(['employer']), async (req, res) => {
-//   try {
-//     const { jobId, amount, mobile_number, network } = req.body;
-
-//     // Log the received data for debugging
-//     console.log('Incoming payment data:', { jobId, amount, mobile_number, network });
-
-//     const job = await Job.findById(jobId).populate('craftsmanId');
-//     if (!job || job.status !== 'in-progress' || job.employerId.toString() !== req.user._id.toString()) {
-//       console.error('Payment initiation failed: Invalid job or unauthorized.');
-//       return res.render('employer/payment-failed', { message: 'Invalid job or unauthorized.' });
-//     }
-
-//     const txRef = `CS_${Date.now()}_${req.user._id}`;
-
-//     const response = await axios.post(
-//       'https://api.flutterwave.com/v3/payments',
-//       {
-//         tx_ref: txRef,
-//         amount,
-//         currency: 'UGX',
-//         redirect_url: process.env.FLUTTERWAVE_REDIRECT_URL,
-//         customer: {
-//           email: req.user.email || 'no-reply@craftsmart.com',
-//           phonenumber: mobile_number,
-//           name: req.user.name || 'Craftsmart User'
-//         },
-//         meta: { job_id: jobId, craftsman_id: job.craftsmanId, network },
-//         customizations: { title: job.title, description: `Payment for job: ${job.title}` }
-//       },
-//       { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`, "Content-Type": "application/json" } }
-//     );
-
-//     const fwData = response.data;
-//     // Log the full Flutterwave response for inspection
-//     console.log('Full Flutterwave response data:', JSON.stringify(fwData, null, 2));
-
-//     if (fwData.status === 'success' && fwData.data?.link) {
-//       // Save PENDING transaction locally
-//       await Transaction.create({
-//         userId: req.user._id,
-//         jobId: job._id,
-//         flwRef: txRef,
-//         status: 'PENDING',
-//         total_amount: amount,
-//       });
-//       console.log('Successfully received hosted link. Redirecting user...');
-//       //  Direct redirect to Flutterwave
-//       return res.redirect(fwData.data.link);
-//     }
-
-//     // fallback
-//     console.error('Unexpected Flutterwave response:', fwData);
-//     return res.render('employer/payment-failed', { message: 'Failed to initiate payment. Hosted link missing.' });
-
-//   } catch (error) {
-//     console.error('Payment initiation error:', error.response?.data || error.message);
-//     return res.render('employer/payment-failed', { message: 'Failed to initiate payment. Please try again.' });
-//   }
-// });
 // --- Socket.IO Logic (Updated with Flutterwave payment) ---
 io.on("connection", (socket) => {
   console.log("✅ User connected:", socket.id);
 
-  // Join private room for each user (optional)
+  // Join private room
   socket.on("join", (userId) => {
     if (userId) {
       socket.join(userId);
@@ -575,14 +795,14 @@ io.on("connection", (socket) => {
       io.to(receiverId).emit("newMessage", {
         senderId: savedMessage.senderId,
         content: savedMessage.content,
-        timestamp: savedMessage.timestamp
+        timestamp: savedMessage.timestamp,
       });
     } catch (err) {
       console.error("Error saving message:", err);
     }
   });
 
-  // Payment initiation
+  // ✅ Payment initiation
   socket.on("initiatePayment", async (data) => {
     try {
       const { jobId, amount, mobile_number, userId } = data;
@@ -595,56 +815,54 @@ io.on("connection", (socket) => {
       const craftsman = await User.findById(job.craftsmanId);
       if (!employer || !craftsman) throw new Error("User not found");
 
-      // Create tx reference
       const txRef = `CS_${Date.now()}_${userId}`;
 
-      // Flutterwave payment payload
       const payload = {
         tx_ref: txRef,
         amount,
         currency: "UGX",
         redirect_url: process.env.FLUTTERWAVE_REDIRECT_URL,
-        customer: { email: employer.email, phonenumber: mobile_number, name: employer.name },
-        meta: { job_id: jobId, craftsman_id: job.craftsmanId },
-        customizations: { title: job.title, description: `Payment for job: ${job.title}` }
+        customer: {
+          email: employer.email,
+          phonenumber: mobile_number,
+          name: employer.name,
+        },
+        meta: {
+          job_id: jobId,
+          craftsman_id: job.craftsmanId,
+          customer_id: userId, // included but not strictly required later
+          employer_phone: employer.mobile,
+          craftsman_phone: craftsman.mobile,
+        },
+        customizations: {
+          title: job.title,
+          description: `Payment for job: ${job.title}`,
+        },
       };
+
+      console.log("ℹ️ Sending this meta data to Flutterwave:", payload.meta);
 
       const response = await axios.post(
         "https://api.flutterwave.com/v3/payments",
         payload,
-        { headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, "Content-Type": "application/json" } }
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
 
       const fwData = response.data;
 
       if (fwData.status === "success" && fwData.data.link) {
-        // Save transaction in DB with all required fields
-        const newTransaction = new Transaction({
-          userId,                        // employer
-          jobId,
-          craftsmanId: job.craftsmanId,
-          craftsman_phone: craftsman.mobile,
-          employer_phone: employer.mobile,
-          disbursement_amount: amount,
-          commission_amount: 0,
-          flwRef: txRef,
-          status: "PENDING",
-          total_amount: amount
-        });
-        await newTransaction.save();
-
-        // Update job status to reflect payment started only if it's still open
-        if (job.status === "open") {
-          job.status = "in-progress"; // valid enum
-          await job.save();
-        }
-
-        // Emit hosted payment link back to client
         socket.emit("paymentLink", { success: true, link: fwData.data.link });
       } else {
-        socket.emit("paymentLink", { success: false, message: "Failed to initiate payment" });
+        socket.emit("paymentLink", {
+          success: false,
+          message: "Failed to initiate payment",
+        });
       }
-
     } catch (err) {
       console.error("❌ Payment initiation error:", err.message);
       socket.emit("paymentLink", { success: false, message: "Server error" });
@@ -656,89 +874,102 @@ io.on("connection", (socket) => {
   });
 });
 
-
 // --- Route to handle Flutterwave payment verification ---
-
-app.get('/payment/verify', async (req, res) => {
+app.get("/payment/verify", async (req, res) => {
   try {
     const { tx_ref } = req.query;
-    if (!tx_ref) return res.status(400).send('Transaction reference missing.');
+    if (!tx_ref) return res.status(400).send("Transaction reference missing.");
 
-    // Find the transaction by local reference
-    const transaction = await Transaction.findOne({ flwRef: tx_ref });
-    if (!transaction) return res.status(404).send('Transaction not found.');
-
-    // Verify payment with Flutterwave using the correct secret key
+    // 1️⃣ Verify payment with Flutterwave
     const verifyResponse = await axios.get(
       `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${tx_ref}`,
       {
-        headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` } // use the correct env variable
+        headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
       }
     );
 
     const fwData = verifyResponse.data;
+    console.log("ℹ️ Received this meta data from Flutterwave:", fwData.data.meta);
 
-    if (fwData.status === 'success' && fwData.data.status === 'successful') {
-      // Mark transaction as completed
-      transaction.status = 'COMPLETED';
-      transaction.transactionId = fwData.data.id; // Flutterwave transaction ID
-      await transaction.save();
+    // 2️⃣ Fetch job and users
+    const jobId = fwData.data.meta?.job_id;
+    if (!jobId) {
+      console.error("❌ Missing job_id in Flutterwave meta.");
+      return res.status(400).send("Verification failed: job ID missing.");
+    }
 
-      // Update job status to 'paid-in-escrow' if needed
-      const job = await Job.findById(transaction.jobId);
-      if (job) {
-        // Only set 'paid-in-escrow' if job is still in-progress
-        if (['open', 'in-progress'].includes(job.status)) {
-          job.status = 'paid-in-escrow';
-          await job.save();
-        }
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(400).send("Verification failed: job not found.");
+
+    const employer = await User.findById(job.employerId);
+    const craftsman = await User.findById(job.craftsmanId);
+    if (!employer || !craftsman) return res.status(400).send("Verification failed: associated data not found.");
+
+    // 3️⃣ Handle transaction after Flutterwave verification
+    try {
+      let transaction = await Transaction.findOne({ gatewayRef: fwData.data.flw_ref || fwData.data.id });
+
+      if (transaction) {
+        // ✅ Update existing transaction
+        transaction.status = "COMPLETED";
+        transaction.employer_phone = employer.mobile;
+        transaction.craftsman_phone = craftsman.mobile;
+        transaction.payment_method = fwData.data.payment_type;
+        transaction.payment_reference = fwData.data.flw_ref;
+        transaction.external_transaction_id = fwData.data.id;
+        transaction.webhook_received_at = new Date();
+        await transaction.save();
+        console.log(`✅ Existing transaction ${transaction.gatewayRef} updated successfully.`);
+      } else {
+        // ✅ Create new transaction
+        transaction = new Transaction({
+          type: "deposit",
+          job: job._id,
+          user: employer._id,
+          craftsmanId: craftsman._id,
+          gatewayRef: fwData.data.flw_ref || fwData.data.id,
+          status: "COMPLETED",
+          total_amount: fwData.data.amount,
+          commission_amount: 0,
+          disbursement_amount: fwData.data.amount,
+          employer_phone: employer.mobile,
+          craftsman_phone: craftsman.mobile,
+          payment_method: fwData.data.payment_type,
+          payment_reference: fwData.data.flw_ref,
+          external_transaction_id: fwData.data.id,
+          webhook_received_at: new Date(),
+        });
+        await transaction.save();
+        console.log(`✅ New transaction ${transaction.gatewayRef} saved successfully.`);
       }
+    } catch (error) {
+      console.error("❌ Error saving transaction:", error.message);
+    }
 
-      return res.render('employer/payment-success', { message: 'Payment successful!' });
+    // 4️⃣ Update job status if necessary
+    if (["open", "in-progress"].includes(job.status)) {
+      job.status = "paid-in-escrow";
+      await job.save();
+    }
 
-    } else if (fwData.data && fwData.data.status === 'pending') {
-      transaction.status = 'PENDING';
-      await transaction.save();
-      return res.render('employer/payment-otp', { tx_ref });
-
+    // 5️⃣ Render success page
+    if (fwData.status === "success" && fwData.data.status === "successful") {
+      return res.render("employer/payment-success", { message: "Payment successful!" });
+    } else if (fwData.data && fwData.data.status === "pending") {
+      return res.render("employer/payment-otp", { tx_ref });
     } else {
-      transaction.status = 'FAILED';
-      await transaction.save();
-      return res.render('employer/payment-failed', { message: 'Payment failed. Please try again.' });
+      return res.render("employer/payment-failed", { message: "Payment failed. Please try again." });
     }
 
   } catch (error) {
-    console.error('Error verifying payment:', error.response?.data || error.message);
-    return res.status(500).send('Server error during payment verification.');
+    console.error("Error verifying payment:", error.response?.data || error.message);
+    return res.status(500).send("Server error during payment verification.");
   }
 });
-
 
 
 // 💡 NEW ROUTE: To view a craftsman's profile
-app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (req, res) => {
-  // Fix: This query now correctly fetches all jobs with a status of 'open'
-  const availableJobs = await Job.find({ status: 'open' }).lean();
-  const myJobs = await Job.find({ craftsmanId: req.user._id }).lean();
-  res.render('craftsman/dashboard', { user: req.user, availableJobs, myJobs, path: req.path });
-});
 
-app.get('/craftsman/:craftsmanId', requireAuth, async (req, res) => {
-  try {
-    const { craftsmanId } = req.params;
-    const craftsman = await User.findById(craftsmanId).lean();
-
-    if (!craftsman || craftsman.role !== 'craftsman') {
-      return res.status(404).render('error', { message: 'Craftsman not found.' });
-    }
-
-    // Render the craftsman profile page. Make sure you have this PUG file.
-    res.render('craftsman/profile', { user: req.user, craftsman, path: req.path });
-  } catch (error) {
-    console.error('Error fetching craftsman profile:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
 
 // CORRECTED: Corrected route for payment form with live data
 app.get('/employer/deposit-funds/:jobId', requireAuth, requireRole(['employer']), async (req, res) => {
@@ -812,40 +1043,148 @@ app.get('/payment/status/:transactionId', async (req, res) => {
     res.redirect('/employer/dashboard');
   }
 });
+
 // ----------------------------------------------------
-// Craftsman Routes
+// Craftsman Routes (directly in app.js)
 // ----------------------------------------------------
+
+// Dashboard
 app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (req, res) => {
-  // Fix: This query now correctly fetches all jobs with a status of 'open'
-  const availableJobs = await Job.find({ status: 'open' }).lean();
-  const myJobs = await Job.find({ craftsmanId: req.user._id }).lean();
-  res.render('craftsman/dashboard', { user: req.user, availableJobs, myJobs, path: req.path });
+  try {
+    const availableJobs = await Job.find({ status: 'open' }).lean();
+    const myJobs = await Job.find({ craftsmanId: req.user._id }).lean();
+
+    res.render('craftsman/dashboard', {
+      user: req.user,
+      availableJobs,
+      myJobs,
+      path: req.path
+    });
+  } catch (err) {
+    console.error('Error loading dashboard:', err);
+    res.status(500).send('Internal Server Error');
+  }
 });
-app.get('/craftsman/profile', requireAuth, requireRole(['craftsman']), (req, res) => {
-  const platformAverage = { communication: 75, technicalSkill: 70, punctuality: 80, quality: 75, safety: 85 };
-  const userProfile = req.user.profile || { communication: 0, technicalSkill: 0, punctuality: 0, quality: 0, safety: 0 };
-  const isPending = !req.user.approved;
-  res.render('craftsman/profile', { user: { ...req.user.toObject(), profile: userProfile }, platformAverage, path: req.path, isPending: isPending });
+
+// Profile of logged-in craftsman
+app.get('/craftsman/profile', requireAuth, requireRole(['craftsman']), async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).lean();
+    if (!user) return res.status(404).send('User not found.');
+
+    const platformAverage = {
+      communication: 75,
+      technicalSkill: 70,
+      punctuality: 80,
+      quality: 75,
+      safety: 85
+    };
+
+    const userProfile = user.profile || {
+      communication: 0,
+      technicalSkill: 0,
+      punctuality: 0,
+      quality: 0,
+      safety: 0
+    };
+
+    const isPending = !user.approved;
+
+    res.render('craftsman/profile', {
+      user: { ...user, profile: userProfile },
+      platformAverage,
+      path: req.path,
+      isPending
+    });
+  } catch (err) {
+    console.error('Error fetching profile:', err);
+    res.status(500).send('Internal Server Error');
+  }
 });
-// 💡 NEW ROUTE: POST route for a craftsman to apply for a job.
+
+// Update profile
+app.post(
+  '/craftsman/profile',
+  requireAuth,
+  requireRole(['craftsman']),
+  upload.fields([
+    { name: 'profilePicture', maxCount: 1 },
+    { name: 'cv', maxCount: 1 },
+    { name: 'coverLetter', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user._id);
+      if (!user) return res.status(404).send('User not found.');
+
+      if (!user.approved) {
+        return res.status(403).send(
+          'Your profile is pending admin approval and cannot be updated at this time.'
+        );
+      }
+
+      // Update basic info
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.experience = parseInt(req.body.experience) || user.experience;
+
+      // Skills
+      if (req.body.skills) {
+        user.skills = req.body.skills.split(',').map((s) => s.trim());
+      }
+
+      // Location
+      if (req.body.location) {
+        user.location = {
+          city: req.body.location.city || user.location.city,
+          region: req.body.location.region || user.location.region,
+          district: req.body.location.district || user.location.district
+        };
+      }
+
+      // Profile ratings
+      if (req.body.profile) {
+        user.profile = {
+          communication: parseInt(req.body.profile.communication) || user.profile.communication,
+          technicalSkill: parseInt(req.body.profile.technicalSkill) || user.profile.technicalSkill,
+          punctuality: parseInt(req.body.profile.punctuality) || user.profile.punctuality,
+          quality: parseInt(req.body.profile.quality) || user.profile.quality,
+          safety: parseInt(req.body.profile.safety) || user.profile.safety
+        };
+      }
+
+      // File uploads
+      if (req.files?.profilePicture?.length > 0) {
+        user.profilePicture = `/uploads/${req.files.profilePicture[0].filename}`;
+      }
+      if (req.files?.cv?.length > 0) {
+        user.cvPath = `/uploads/${req.files.cv[0].filename}`;
+      }
+      if (req.files?.coverLetter?.length > 0) {
+        user.coverLetterPath = `/uploads/${req.files.coverLetter[0].filename}`;
+      }
+
+      user.approved = false;
+
+      await user.save();
+      res.redirect('/craftsman/profile?updated=true');
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+);
+
+// Apply for a job
 app.post('/craftsman/apply-for-job/:jobId', requireAuth, requireRole(['craftsman']), async (req, res) => {
   try {
     const { jobId } = req.params;
     const craftsmanId = req.user._id;
 
-    // Check if the craftsman has already applied for this job
     const existingApplication = await Application.findOne({ jobId, craftsmanId });
-    if (existingApplication) {
-      return res.status(400).send('You have already applied for this job.');
-    }
+    if (existingApplication) return res.status(400).send('You have already applied for this job.');
 
-    // Create a new application
-    const newApplication = new Application({
-      jobId,
-      craftsmanId,
-      status: 'pending' // Initial status is pending
-    });
-
+    const newApplication = new Application({ jobId, craftsmanId, status: 'pending' });
     await newApplication.save();
     res.redirect('/craftsman/dashboard');
   } catch (err) {
@@ -854,17 +1193,13 @@ app.post('/craftsman/apply-for-job/:jobId', requireAuth, requireRole(['craftsman
   }
 });
 
-// 💡 NEW ROUTE: GET route for a craftsman to view a job's details
+// Job details
 app.get('/craftsman/jobs/:jobId', requireAuth, requireRole(['craftsman']), async (req, res) => {
   try {
     const { jobId } = req.params;
     const job = await Job.findById(jobId).lean();
+    if (!job) return res.status(404).send('Job not found.');
 
-    if (!job) {
-      return res.status(404).send('Job not found.');
-    }
-
-    // Render the job details page, passing the job object
     res.render('craftsman/job-details', {
       user: req.user,
       job,
@@ -875,43 +1210,26 @@ app.get('/craftsman/jobs/:jobId', requireAuth, requireRole(['craftsman']), async
     res.status(500).send('Internal Server Error');
   }
 });
-app.post('/craftsman/profile', requireAuth, requireRole(['craftsman']), upload.fields([{ name: 'profilePicture', maxCount: 1 }, { name: 'cv', maxCount: 1 }, { name: 'coverLetter', maxCount: 1 }]), async (req, res) => {
+
+// View another craftsman's profile (dynamic route last!)
+app.get('/craftsman/:craftsmanId', requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (!user) { return res.status(404).send('User not found.'); }
-    if (!user.approved) { return res.status(403).send('Your profile is pending admin approval and cannot be updated at this time.'); }
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    user.experience = parseInt(req.body.experience) || user.experience;
-    if (req.body.skills) { user.skills = req.body.skills.split(',').map(s => s.trim()); }
-    if (req.body.location) {
-      user.location = {
-        city: req.body.location.city || user.location.city,
-        region: req.body.location.region || user.location.region,
-        district: req.body.location.district || user.location.district
-      };
+    const { craftsmanId } = req.params;
+    const craftsman = await User.findById(craftsmanId).lean();
+
+    if (!craftsman || craftsman.role !== 'craftsman') {
+      return res.status(404).render('error', { message: 'Craftsman not found.' });
     }
-    if (req.body.profile) {
-      user.profile = {
-        communication: parseInt(req.body.profile.communication) || user.profile.communication,
-        technicalSkill: parseInt(req.body.profile.technicalskill) || user.profile.technicalSkill,
-        punctuality: parseInt(req.body.profile.punctuality) || user.profile.punctuality,
-        quality: parseInt(req.body.profile.quality) || user.profile.quality,
-        safety: parseInt(req.body.profile.safety) || user.profile.safety,
-      };
-    }
-    if (req.files && req.files.profilePicture && req.files.profilePicture.length > 0) { user.profilePicture = `/uploads/${req.files.profilePicture[0].filename}`; }
-    if (req.files && req.files.cv && req.files.cv.length > 0) { user.cvPath = `/uploads/${req.files.cv[0].filename}`; }
-    if (req.files && req.files.coverLetter && req.files.coverLetter.length > 0) { user.coverLetterPath = `/uploads/${req.files.coverLetter[0].filename}`; }
-    user.approved = false;
-    await user.save();
-    res.redirect('/craftsman/profile?updated=true');
+
+    res.render('craftsman/profile', { user: req.user, craftsman, path: req.path });
   } catch (err) {
-    console.error('Error updating profile:', err);
-    res.status(500).send('An error occurred while updating the profile.');
+    console.error('Error fetching craftsman profile:', err);
+    res.status(500).send('Internal Server Error');
   }
 });
+
 // ----------------------------------------------------
+
 // --- COMBINED Admin Dashboard Route ---
 // This route is correct. It uses Mongoose queries to fetch data for the dashboard.
 app.get('/admin/dashboard', requireAuth, requireRole(['admin']), async (req, res) => {
@@ -1061,86 +1379,174 @@ app.get('/admin/employer/:userId', requireAuth, requireRole(['admin']), async (r
     res.status(500).send('Server Error');
   }
 });
+
+// NOTE: These are placeholders. In a real application, you would define these in separate files.
+// const userSchema = new mongoose.Schema({
+//     username: String,
+//     role: { type: String, enum: ['admin', 'craftsman'], default: 'craftsman' },
+//     approved: { type: Boolean, default: false }
+// });
+
+// const User = mongoose.model('User', userSchema);
+
+// // Connect to a MongoDB database (replace with your actual URI)
+// mongoose.connect('mongodb://localhost:27017/craftsmart', {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true
+// }).then(() => {
+//     console.log('MongoDB connected successfully.');
+// }).catch(err => {
+//     console.error('MongoDB connection error:', err);
+// });
+
+// // Middleware to parse request bodies
+// app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json());
+
+// // Set up Pug as the view engine
+// app.set('views', path.join(__dirname, 'views'));
+// app.set('view engine', 'pug');
+
+// // --- Placeholder Middleware and Functions ---
+
+// // Placeholder authentication middleware
+// // In a real application, you would use a library like Passport.js
+// // to handle user authentication and roles.
+// const requireAuth = (req, res, next) => {
+//     // This is a dummy user object for testing
+//     req.user = { _id: 'admin-user-id', role: 'admin' };
+//     next();
+// };
+
+// const requireRole = (roles) => (req, res, next) => {
+//     // In a real application, this would check if the user's role is in the roles array
+//     if (roles.includes(req.user.role)) {
+//         next();
+//     } else {
+//         res.status(403).send('Forbidden: Insufficient privileges');
+//     }
+// };
+
+// const formatDate = (date) => {
+//     if (!date) return 'N/A';
+//     return date.toLocaleDateString();
+// };
+
+// --- Your Provided Routes, now integrated and functional ---
+
+// Routes for approving and rejecting a craftsman
+// Routes for approving and rejecting a craftsman
 app.post('/admin/approve-craftsman/:userId', requireAuth, requireRole(['admin']), async (req, res) => {
-  const userId = req.params.userId;
-  try {
-    await User.findByIdAndUpdate(userId, { approved: true });
-    res.redirect('/admin/dashboard');
-  } catch (err) {
-    console.error('Error approving craftsman:', err);
-    res.status(500).send('Internal Server Error');
-  }
-});
-app.post('/admin/reject-craftsman/:userId', requireAuth, requireRole(['admin']), async (req, res) => {
-  const userId = req.params.userId;
-  try {
-    await User.findByIdAndDelete(userId);
-    res.redirect('/admin/dashboard');
-  } catch (err) {
-    console.error('Error rejecting craftsman:', err);
-    res.status(500).send('Internal Server Error');
-  }
+    const userId = req.params.userId;
+    try {
+        await User.findByIdAndUpdate(userId, { approved: true });
+        res.redirect('/admin/dashboard');
+    } catch (err) {
+        console.error('Error approving craftsman:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
+app.post('/admin/reject-craftsman/:userId', requireAuth, requireRole(['admin']), async (req, res) => {
+    const userId = req.params.userId;
+    try {
+        await User.findByIdAndDelete(userId);
+        res.redirect('/admin/dashboard');
+    } catch (err) {
+        console.error('Error rejecting craftsman:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// Routes for managing the blacklist
 app.get('/admin/blacklist', requireAuth, requireRole(['admin']), async (req, res) => {
-  try {
-    const blacklistEntries = await Blacklist.find();
-    res.render('admin/blacklist', {
-      user: req.user,
-      blacklist: blacklistEntries,
-      path: req.path,
-      formatDate: formatDate
-    });
-  } catch (err) {
-    console.error('Error fetching admin blacklist:', err);
-    res.status(500).send('Internal Server Error');
-  }
+    console.log('GET request to /admin/blacklist received.');
+    try {
+        const blacklistEntries = await Blacklist.find();
+        res.render('admin/blacklist', {
+            user: req.user,
+            blacklist: blacklistEntries,
+            path: req.path,
+            formatDate: formatDate
+        });
+    } catch (err) {
+        console.error('Error fetching admin blacklist:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.post('/admin/blacklist', requireAuth, requireRole(['admin']), async (req, res) => {
-  const { name, mobile, reason } = req.body;
-  const newBlacklistEntry = new Blacklist({ name, mobile, reason, addedBy: req.user._id });
-  try {
-    await newBlacklistEntry.save();
-    res.redirect('/admin/blacklist');
-  } catch (err) {
-    console.error('Error adding to blacklist:', err);
-    res.status(500).send('Internal Server Error');
-  }
+    console.log('POST request to /admin/blacklist received.');
+    const { name, mobile, reason, password } = req.body;
+    console.log('Request Body:', req.body);
+
+    // Validate the admin password
+    if (password !== process.env.ADMIN_PASSWORD) {
+        console.warn('Unauthorized attempt to add to blacklist with incorrect password.');
+        return res.status(401).json({ success: false, message: 'Unauthorized: Incorrect password' });
+    }
+    console.log('Password is correct. Proceeding to add entry.');
+
+    const newBlacklistEntry = new Blacklist({
+        name,
+        mobile,
+        reason,
+        addedBy: req.user._id,
+        addedAt: new Date()
+    });
+    
+    try {
+        await newBlacklistEntry.save();
+        console.log('New entry saved to database successfully.');
+        res.redirect('/admin/blacklist');
+    } catch (err) {
+        console.error('Error adding to blacklist:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.delete('/admin/blacklist/:id', requireAuth, requireRole(['admin']), async (req, res) => {
-  const id = req.params.id;
+    console.log(`DELETE request to /admin/blacklist/${req.params.id} received.`);
+    const id = req.params.id;
+    const { password } = req.body;
+    console.log('Request Body:', req.body);
 
-  const { password } = req.body;
-  const adminPassword = "12345678";
+    if (password !== process.env.ADMIN_PASSWORD) {
+        console.warn('Unauthorized attempt to delete from blacklist with incorrect password.');
+        return res.status(401).json({ success: false, message: 'Unauthorized: Incorrect password' });
+    }
+    console.log('Password is correct. Proceeding to delete entry.');
 
-  if (password !== adminPassword) {
-    return res.status(401).json({ success: false, message: 'Unauthorized: Incorrect password' });
-  }
-
-  try {
-    await Blacklist.findByIdAndDelete(id);
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error deleting from blacklist:', err);
-    res.status(500).send('Internal Server Error');
-  }
+    try {
+        await Blacklist.findByIdAndDelete(id);
+        console.log(`Entry with ID ${id} deleted successfully.`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting from blacklist:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.get('/public-blacklist', async (req, res) => {
-  try {
-    const blacklistEntries = await Blacklist.find();
-    res.render('public-blacklist', {
-      blacklist: blacklistEntries,
-      path: req.path,
-      formatDate: formatDate
-    });
-  } catch (err) {
-    console.error('Error fetching public blacklist:', err);
-    res.status(500).send('Internal Server Error');
-  }
+    try {
+        const blacklistEntries = await Blacklist.find();
+        res.render('public-blacklist', {
+            blacklist: blacklistEntries,
+            path: req.path,
+            formatDate: formatDate
+        });
+    } catch (err) {
+        console.error('Error fetching public blacklist:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
+
+// A simple root route to show the server is running.
+app.get('/', (req, res) => {
+    res.send('Server is running. Navigate to /admin/blacklist to view the page.');
+});
+
+
 
 app.get('/admin/reports', requireAuth, requireRole(['admin']), async (req, res) => {
   try {

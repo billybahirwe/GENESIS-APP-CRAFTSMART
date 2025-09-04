@@ -6,63 +6,89 @@ html(lang="en")
     title CraftSmart - Craftsman Outsourcing Platform
     link(rel="stylesheet", href="/css/style.css")
     link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css")
-    
-    // Add the Chart.js script here
     script(src="https://cdn.jsdelivr.net/npm/chart.js")
-    
-    // This block is the placeholder for child templates to add to the head
     block head
-    
+
   body(class=(path === '/' ? 'homepage' : '') data-user-id=user ? user._id : '')
     header.header
       .container
         .header-content
           .logo
             a(href="/") CraftSmart
+          
+          //- This is the new, updated navigation block
           nav.nav(id="nav")
-            ul
+            .profile-section
+              if user
+                a(href=`/${user.role}/profile`)
+                  if user.profilePicture
+                    img.profile-avatar(src=user.profilePicture, alt="Profile Picture")
+                  else
+                    //- Use the first letter of the user's name as a placeholder
+                    .profile-initial-placeholder #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
+                .profile-details
+                  span.profile-name #{user.name}
+              else
+                .profile-initial-placeholder
+                  i.fas.fa-user
+              
+            ul.nav-list
               if user
                 li
-                  a(href=`/${user.role}/dashboard`) Dashboard
-                
+                  a(href=`/${user.role}/dashboard`)
+                    i.fas.fa-tachometer-alt
+                    span Dashboard
                 if user.role === 'employer'
                   li
-                    a(href="/employer/post-job") Post Job
+                    a(href="/employer/post-job")
+                      i.fas.fa-plus-circle
+                      span Post Job
                   li
-                    a(href="/employer/browse-craftsmen") Browse Craftsmen
-                
+                    a(href="/employer/browse-craftsmen")
+                      i.fas.fa-search
+                      span Browse Craftsmen
                 if user.role === 'admin'
                   li
-                    a(href="/admin/blacklist") Admin Blacklist
-                
+                    a(href="/admin/blacklist")
+                      i.fas.fa-user-shield
+                      span Admin Blacklist
+                if user.role === 'craftsman'
+                  li
+                    a(href="/craftsman/profile")
+                      i.fas.fa-id-badge
+                      span My Profile
                 li
-                  a(href="/public-blacklist") Public Blacklist
+                  a(href="/public-blacklist")
+                    i.fas.fa-ban
+                    span Public Blacklist
                 li
-                  a(href="/logout") Logout
+                  a(href="/logout")
+                    i.fas.fa-sign-out-alt
+                    span Logout
               else
                 li
-                  a(href="/login") Login
+                  a(href="/login")
+                    i.fas.fa-sign-in-alt
+                    span Login
                 li
-                  a(href="/register") Register
+                  a(href="/register")
+                    i.fas.fa-user-plus
+                    span Register
                 li
-                  a(href="/contact") Contact Us
-          
+                  a(href="/contact")
+                    i.fas.fa-envelope
+                    span Contact Us
+
           .header-icons
             if user
-              // Notification bell icon with message count
               a.nav-icon.notification-link(href="#")
                 i.fas.fa-bell
                 span#notification-badge.notification-badge 0
-              
-              // Messages icon
               a.nav-icon.messages-link(href="/messages")
                 i.fas.fa-envelope
-              
-              // Profile dropdown (now without logout)
               .profile-dropdown
                 a.nav-icon.profile-icon(href="#", onclick="toggleDropdown(event)")
                   i.fas.fa-user-circle
-                
                 .profile-dropdown-content#profileDropdown
                   a(href=`/${user.role}/profile`)
                     i.fas.fa-user.mr-2
@@ -70,23 +96,26 @@ html(lang="en")
                   a(href="/contact")
                     i.fas.fa-envelope.mr-2
                     | Contact Us
-      
+                  a(href="/logout")
+                    i.fas.fa-sign-out-alt.mr-2
+                    | Logout
+
           .mobile-menu-toggle(onclick="toggleMobileMenu()")
             span
             span
             span
-    
+
     main.main
       block content
-    
+
     footer.footer
       .container
         p &copy; 2025 CraftSmart. All rights reserved.
-    
+
     script(src="/socket.io/socket.io.js")
     script(src="/js/scripts.js")
     block scripts
-    
+
     script.
       function toggleDropdown(event) {
         event.stopPropagation();

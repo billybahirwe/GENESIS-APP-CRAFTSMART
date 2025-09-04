@@ -5,7 +5,7 @@ block content
     .page-header
       h1.page-title Post a New Job
       p.page-subtitle Describe your project to attract the right craftsmen
-    
+
     .form-container
       form.job-form(action="/employer/post-job", method="POST", enctype="multipart/form-data")
         .form-group
@@ -34,14 +34,86 @@ block content
           input.form-control(type="text", id="location", name="location", required, placeholder="City, State")
         
         .form-group
-          label(for="budget") Budget ($)
-          input.form-control(type="number", id="budget", name="budget", required, min="0", step="0.01", placeholder="0.00")
-        
+          label(for="budget") Budget (UGX)
+          input.form-control(type="number", id="budget", name="budget", required, min="0", step="0.01", placeholder="e.g., 500000")
+          // Fee notification
+          .fee-notification#fee-notification(style="display: none;")
+
         .form-group
           label(for="images") Project Images (Optional)
-          input.form-control(type="file", id="images", name="images", multiple, accept="image/*")
-          small.form-text Upload up to 5 images to help craftsmen understand your project
+          #images-container
+            .image-upload-wrapper.mb-2
+              input.form-control(type="file", name="images", accept="image/*")
+          button.btn.btn-secondary.btn-sm.mt-2#add-image-btn(type="button") Add Another Image
+          small.form-text.text-muted.mt-2 Upload up to 10 images to help craftsmen understand your project
         
         .form-actions
           button.btn.btn-primary(type="submit") Post Job
           a.btn.btn-secondary(href="/employer/dashboard") Cancel
+
+block scripts
+  script.
+    document.addEventListener("DOMContentLoaded", function () {
+      const container = document.getElementById("images-container");
+      const addBtn = document.getElementById("add-image-btn");
+
+      const firstInputWrapper = container.querySelector(".image-upload-wrapper");
+      if (firstInputWrapper) addDeleteButton(firstInputWrapper);
+
+      addBtn.addEventListener("click", function () {
+        const inputs = container.querySelectorAll("input[type='file']");
+        if (inputs.length >= 10) {
+          alert("You can only upload up to 10 images.");
+          return;
+        }
+
+        const newWrapper = document.createElement("div");
+        newWrapper.classList.add("image-upload-wrapper", "mb-2");
+        
+        const newInput = document.createElement("input");
+        newInput.type = "file";
+        newInput.name = "images";
+        newInput.accept = "image/*";
+        newInput.classList.add("form-control");
+        
+        newWrapper.appendChild(newInput);
+        addDeleteButton(newWrapper);
+        container.appendChild(newWrapper);
+      });
+
+      function addDeleteButton(wrapper) {
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.classList.add("btn", "btn-danger", "btn-sm", "ms-2");
+        deleteBtn.addEventListener("click", function () {
+          wrapper.remove();
+        });
+        wrapper.appendChild(deleteBtn);
+      }
+
+      // --- System Fee Notification ---
+      const budgetInput = document.getElementById("budget");
+      const feeNotification = document.getElementById("fee-notification");
+      const feePercentage = 0.10;       // 10% fee
+      const minFee = 10000;             // Minimum fee in UGX
+
+      budgetInput.addEventListener("input", function() {
+        const budget = parseFloat(this.value);
+        if (budget > 0) {
+          // Calculate fee: 10% or minimum UGX 10,000
+          const feeAmount = Math.max(budget * feePercentage, minFee);
+          const craftsmanReceives = budget - feeAmount;
+
+          feeNotification.style.display = "block";
+          feeNotification.innerHTML = `
+            <p class="mt-2 text-info">
+              <strong>Note:</strong> A system fee of <strong>UGX ${feeAmount.toLocaleString('en-UG')}</strong> will be deducted from the budget.
+              The craftsman will receive <strong>UGX ${craftsmanReceives.toLocaleString('en-UG')}</strong>.
+            </p>
+          `;
+        } else {
+          feeNotification.style.display = "none";
+        }
+      });
+    });

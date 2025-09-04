@@ -1,0 +1,44 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title All Job Postings
+      p.page-subtitle Browse all jobs posted by employers.
+
+    .job-list
+      if jobs.length > 0
+        each job in jobs
+          .job-card.mb-4
+            .card-body
+              h3.card-title= job.title
+              .job-meta.d-flex.align-items-center.mb-3
+                span.me-3 📍 #{job.location}
+                span.me-3 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
+                span.badge.bg-secondary #{job.category}
+              
+              .job-details.mb-3
+                h5.section-title Description
+                p.card-text= job.description
+              
+              // Display images if they exist
+              if job.images && job.images.length > 0
+                .job-images.mb-3
+                  h5.section-title Job Photos
+                  .image-grid
+                    each image in job.images
+                      img.img-thumbnail.me-2.mb-2(src=image, alt=`Image of ${job.title}` style="width: 150px; height: 150px; object-fit: cover;")
+              
+              .d-flex.justify-content-between.align-items-center
+                // This link will go to the detailed job page, which is read-only for other employers
+                a.btn.btn-outline-primary.btn-sm(href=`/job/${job._id}`) View Full Details
+                small.text-muted Posted on: #{job.createdAt.toLocaleDateString()}
+      
+      else
+        .empty-state
+          .empty-icon 📄
+          h3 No Jobs Posted Yet
+          p There are no job postings to display at this time.
+    
+    .back-link.mt-4
+      a(href="/employer/dashboard") ← Back to Dashboard

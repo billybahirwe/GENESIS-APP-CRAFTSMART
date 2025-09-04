@@ -1,5 +1,3 @@
-//- D:\GENESIS\GENESIS-APP-CRAFTSMART\project\views\craftsman\dashboard.pug
-
 extends ../layout
 
 block content
@@ -69,8 +67,7 @@ block content
                 span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                 span.job-status(class=`status-${job.status}`)= job.status
               .job-actions
-                a.btn.btn-primary.btn-sm(href=`/craftsman/contact-employer/${job.employerId}`) Contact Employer
-                a.btn.btn-secondary.btn-sm(href=`/craftsman/update-status/${job._id}`) Update Status
+                a.btn.btn-secondary.btn-sm(href=`/craftsman/jobs/${job._id}`) View Details
                 if job.status === 'SUCCESSFUL'
                   p.payment-status(style='color: #FFC107; font-weight: bold;') Employer has paid. Funds pending release.
                 else if job.status === 'COMPLETED'

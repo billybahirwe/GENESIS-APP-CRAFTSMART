@@ -1,4 +1,3 @@
-//- D:\GENESIS\GENESIS-APP-CRAFTSMART\project\views\craftsman\job-details.pug
 extends ../layout
 
 block content
@@ -19,21 +18,45 @@ block content
         h2.section-title Description
         p.job-description= job.description
 
-      // Images if available
+      // ✅ UPDATED: Images Section with Gallery
       if job.images && job.images.length > 0
-        .job-images
+        .job-section
           h2.section-title Job Photos
-          .image-grid
-            each image in job.images
-              .image-card
-                img.job-image(src=image, alt=`Image of ${job.title}`)
+          .image-gallery.row.g-3
+            each image, index in job.images
+              .col-auto
+                a.gallery-thumbnail(href="#", data-bs-toggle="modal", data-bs-target="#imageModal", data-image-url=image)
+                  img.img-fluid.rounded.job-image-thumbnail(src=image, alt=`Image ${index + 1} of ${job.title}`)
 
       // Apply for Job button
-      // The form action will point to the POST route we created in app.js
       .job-actions
-        form(action=`/craftsman/apply-for-job/${job._id}`, method="POST")
-          button.btn.btn-primary(type="submit") Apply for this Job
+        if user && user.role === 'craftsman'
+          form(action=`/craftsman/apply-for-job/${job._id}`, method="POST")
+            button.btn.btn-primary(type="submit") Apply for this Job
+        else
+          p.text-muted Log in as a craftsman to apply for this job.
+  
+  // Back button
+  .back-link
+    a(href="/craftsman/dashboard") ← Back to Jobs
 
-    // Back button
-    .back-link
-      a(href="/craftsman/dashboard") ← Back to Jobs
+  // ✅ NEW: Bootstrap Modal for Image Zoom
+  #imageModal.modal.fade(tabindex="-1", aria-labelledby="imageModalLabel", aria-hidden="true")
+    .modal-dialog.modal-dialog-centered.modal-xl
+      .modal-content
+        .modal-body.p-0.text-center
+          img.img-fluid#modalImage(src="", alt="Zoomed-in job image")
+        .modal-footer.border-0
+          button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Close
+
+  // ✅ NEW: Script to handle the modal
+  script.
+    document.addEventListener("DOMContentLoaded", function () {
+      const imageModal = document.getElementById("imageModal");
+      imageModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const imageUrl = button.getAttribute("data-image-url");
+        const modalImage = imageModal.querySelector("#modalImage");
+        modalImage.src = imageUrl;
+      });
+    });

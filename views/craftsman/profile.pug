@@ -7,13 +7,15 @@ block content
       p.page-subtitle Manage your professional information
 
     .profile-content-wrapper
+      // -------------------------------
+      // Profile Form Column
+      // -------------------------------
       .profile-form-column
         .profile-header
           .profile-avatar
             if user.profilePicture
               img.profile-img(src=user.profilePicture, alt="Profile Picture")
             else
-              // Show a placeholder initial if no picture is uploaded
               span.profile-initial #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
 
         .profile-form-section
@@ -21,11 +23,11 @@ block content
             .alert.alert-warning
               p Your profile is **pending admin approval**. You cannot make changes at this time.
               p.form-note Once approved, you will be able to update your profile again.
-          
-          form.profile-form(action="/craftsman/profile", method="POST", enctype="multipart/form-data")
-            // Use a fieldset to disable all form controls if the profile is pending
-            fieldset(disabled=user.approved === false)
 
+          form.profile-form(action="/craftsman/profile", method="POST", enctype="multipart/form-data")
+            fieldset(disabled=user.approved === false)
+              
+              // Profile Picture
               .form-group.profile-picture-upload
                 label(for="profilePicture") Upload New Profile Picture
                 .profile-picture-preview
@@ -34,7 +36,8 @@ block content
                   else
                     .placeholder Select Image
                 input.form-control(type="file", id="profilePicture", name="profilePicture", accept="image/*")
-              
+
+              // Basic Info
               .form-row
                 .form-group
                   label(for="name") Full Name
@@ -42,7 +45,12 @@ block content
                 .form-group
                   label(for="email") Email
                   input.form-control(type="email", id="email", name="email", value=user.email || '', required)
-              
+
+              .form-group
+                label(for="phone") Phone Number
+                input.form-control(type="tel", id="phone", name="phone", value=user.phone || '', placeholder="+1234567890", required)
+
+              // Location
               .form-row
                 .form-group
                   label(for="city") City
@@ -50,27 +58,28 @@ block content
                 .form-group
                   label(for="region") Region
                   input.form-control(type="text", id="region", name="location[region]", value=user.location && user.location.region || '', required)
-              
               .form-group
                 label(for="district") District
                 input.form-control(type="text", id="district", name="location[district]", value=user.location && user.location.district || '', required)
-              
+
+              // Experience & Skills
               .form-group
                 label(for="experience") Years of Experience
                 input.form-control(type="number", id="experience", name="experience", value=user.experience || 0, min="0", required)
-              
+
               .form-group
                 label(for="skills") Skills (comma-separated)
                 input.form-control(type="text", id="skills", name="skills", value=user.skills ? user.skills.join(', ') : '', placeholder="e.g., Plumbing, Electrical, Carpentry")
-              
+
+              // File Uploads
               .form-group
                 label(for="cv") Upload your CV (PDF only)
                 input.form-control(type="file", id="cv", name="cv", accept="application/pdf")
-              
               .form-group
                 label(for="coverLetter") Upload your Cover Letter (PDF only)
                 input.form-control(type="file", id="coverLetter", name="coverLetter", accept="application/pdf")
 
+              // Skill Ratings
               .form-group.skill-ratings
                 h4 Rate Your Skills (1-5)
                 each skill in ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety']
@@ -80,16 +89,20 @@ block content
                       - for (var i = 1; i <= 5; i++)
                         span.star(data-value=i) ★
                       input(type="hidden", name=`profile[${skill.toLowerCase().replace(' ', '')}]`, value=user.profile && user.profile[skill.toLowerCase().replace(' ', '')] || 0)
-            
+
+              // Submit
               .form-actions
                 button.btn.btn-primary(type="submit") Update Profile
 
+      // -------------------------------
+      // Chart Column
+      // -------------------------------
       .profile-chart-column
         .profile-chart-section
           .chart-container
             h3 Skill Assessment
             .chart-wrapper
-              canvas(id="skillChart", width="400", height="400")
+              canvas#skillChart(width="400", height="400")
             .chart-legend
               .legend-item
                 .legend-color.legend-user
@@ -101,215 +114,116 @@ block content
 block scripts
   script(src="https://cdn.jsdelivr.net/npm/chart.js")
   script.
-    const style = document.createElement('style');
-    style.innerHTML = `
-      body {
-        /* Prevents the main page from scrolling */
-        overflow-y: hidden;
-      }
-      .container {
-        /* Makes the container the main scrollable area */
-        overflow-y: auto;
-        max-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      .profile-content-wrapper {
-        display: flex;
-        justify-content: space-between;
-        gap: 30px;
-        align-items: flex-start;
-      }
-      .profile-form-column {
-        flex: 1;
-        /* No scrollbar needed here, it's handled by the parent container */
-        max-height: none;
-        overflow-y: visible;
-        padding-right: 0;
-      }
-      .profile-chart-column {
-        flex: 1;
-        position: sticky; /* Keep the chart in place */
-        top: 50px; /* Adjust this value to set the sticky point */
-      }
-      .profile-chart-section {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      .profile-picture-upload {
-        text-align: center;
-        margin-bottom: 20px;
-      }
-      .profile-picture-preview {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        overflow: hidden;
-        margin: 10px auto;
-        border: 2px solid #ccc;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: #f8f9fa;
-      }
-      .profile-picture-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .profile-picture-preview .placeholder {
-        color: #6c757d;
-      }
-      .star-rating {
-        display: flex;
-        align-items: center;
-      }
-      .star-rating .star {
-        font-size: 24px;
-        cursor: pointer;
-        color: #ddd;
-        transition: color 0.2s ease-in-out;
-      }
-      .star-rating .star.selected {
-        color: rgba(37, 99, 235, 1);
-      }
-      .form-row {
-        display: flex;
-        gap: 15px;
-      }
-      .form-group {
-        width: 100%;
-      }
-      .alert-warning {
-        padding: 1rem;
-        background-color: #fff3cd;
-        border: 1px solid #ffeeba;
-        color: #856404;
-        border-radius: 0.25rem;
-        margin-bottom: 1.5rem;
-      }
-    `;
-    document.head.appendChild(style);
-
+    // -------------------------------
+    // Radar Chart
+    // -------------------------------
     const ctx = document.getElementById('skillChart').getContext('2d');
     const userProfile = !{JSON.stringify(user.profile || {})};
     const platformAverageData = !{JSON.stringify(platformAverage || {})};
 
-    const initialUserData = [
+    const userData = [
       (userProfile.communication || 0) * 20,
       (userProfile.technicalSkill || 0) * 20,
       (userProfile.punctuality || 0) * 20,
       (userProfile.quality || 0) * 20,
-      (userProfile.safety || 0) * 20,
+      (userProfile.safety || 0) * 20
+    ];
+
+    const platformData = [
+      (platformAverageData.communication || 0) * 20,
+      (platformAverageData.technicalSkill || 0) * 20,
+      (platformAverageData.punctuality || 0) * 20,
+      (platformAverageData.quality || 0) * 20,
+      (platformAverageData.safety || 0) * 20
     ];
 
     const chart = new Chart(ctx, {
       type: 'radar',
       data: {
         labels: ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'],
-        datasets: [{
-          label: 'Your Skills',
-          data: initialUserData,
-          backgroundColor: 'rgba(37, 99, 235, 0.2)',
-          borderColor: 'rgba(37, 99, 235, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(37, 99, 235, 1)'
-        }, {
-          label: 'Platform Average',
-          data: [
-            (platformAverageData.communication || 0) * 20,
-            (platformAverageData.technicalSkill || 0) * 20,
-            (platformAverageData.punctuality || 0) * 20,
-            (platformAverageData.quality || 0) * 20,
-            (platformAverageData.safety || 0) * 20,
-          ],
-          backgroundColor: 'rgba(156, 163, 175, 0.2)',
-          borderColor: 'rgba(156, 163, 175, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(156, 163, 175, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(156, 163, 175, 1)'
-        }]
+        datasets: [
+          {
+            label: 'Your Skills',
+            data: userData,
+            backgroundColor: 'rgba(37,99,235,0.2)',
+            borderColor: 'rgba(37,99,235,1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(37,99,235,1)',
+            pointBorderColor: '#fff'
+          },
+          {
+            label: 'Platform Average',
+            data: platformData,
+            backgroundColor: 'rgba(156,163,175,0.2)',
+            borderColor: 'rgba(156,163,175,1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(156,163,175,1)',
+            pointBorderColor: '#fff'
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 20
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
+        scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } },
+        plugins: { legend: { display: false } }
       }
     });
 
-    // --- Star Rating Logic ---
+    // -------------------------------
+    // Star Rating Interaction
+    // -------------------------------
     const starContainers = document.querySelectorAll('.star-rating');
-    const skillLabels = ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'];
+    const skillLabels = ['Communication','Technical Skill','Punctuality','Quality','Safety'];
 
     starContainers.forEach(container => {
       const skillName = container.dataset.skill;
       const stars = container.querySelectorAll('.star');
-      const hiddenInput = document.querySelector(`input[name="profile[${skillName}]"]`);
-
+      const hiddenInput = container.querySelector('input[type="hidden"]');
       const initialValue = parseInt(hiddenInput.value);
-      if (initialValue > 0) {
-        stars.forEach((star, index) => {
-          if (index < initialValue) {
-            star.classList.add('selected');
-          }
-        });
-      }
 
+      // Set initial selected stars
+      stars.forEach((star, index) => { if(index < initialValue) star.classList.add('selected'); });
+
+      // Add click event
       stars.forEach(star => {
-        star.addEventListener('click', (e) => {
-          const value = parseInt(e.target.dataset.value);
-          const skillIndex = skillLabels.findIndex(label => label.toLowerCase().replace(' ', '') === skillName);
+        star.addEventListener('click', e => {
+          const value = parseInt(star.dataset.value);
+          hiddenInput.value = value;
 
-          if (skillIndex !== -1) {
+          // Update star colors
+          stars.forEach((s, i) => {
+            if(i < value) s.classList.add('selected');
+            else s.classList.remove('selected');
+          });
+
+          // Update chart
+          const skillIndex = skillLabels.findIndex(label => label.toLowerCase().replace(' ', '') === skillName);
+          if(skillIndex !== -1) {
             chart.data.datasets[0].data[skillIndex] = value * 20;
             chart.update();
           }
-
-          stars.forEach(s => s.classList.remove('selected'));
-          for (let i = 0; i < value; i++) {
-            stars[i].classList.add('selected');
-          }
-          hiddenInput.value = value;
         });
       });
     });
 
-    // --- Profile Picture Preview Logic ---
+    // -------------------------------
+    // Profile Picture Preview
+    // -------------------------------
     const profilePictureInput = document.getElementById('profilePicture');
-    const profilePicturePreviewContainer = document.querySelector('.profile-picture-preview');
-
+    const profilePicturePreview = document.querySelector('.profile-picture-preview');
     profilePictureInput.addEventListener('change', function() {
       const file = this.files[0];
-      if (file) {
+      if(file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          profilePicturePreviewContainer.innerHTML = '';
+        reader.onload = e => {
+          profilePicturePreview.innerHTML = '';
           const img = document.createElement('img');
           img.src = e.target.result;
-          profilePicturePreviewContainer.appendChild(img);
+          profilePicturePreview.appendChild(img);
         }
         reader.readAsDataURL(file);
       } else {
-        profilePicturePreviewContainer.innerHTML = `<div class="placeholder">Select Image</div>`;
+        profilePicturePreview.innerHTML = `<div class="placeholder">Select Image</div>`;
       }
     });

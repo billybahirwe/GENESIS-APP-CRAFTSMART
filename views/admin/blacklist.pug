@@ -23,6 +23,9 @@ block content
           .form-group
             label(for="reason") Reason for Blacklisting
             textarea.form-control(id="reason", name="reason", rows="3", required, placeholder="Describe the reason for blacklisting this user...")
+          .form-group
+            label(for="password") Admin Password
+            input.form-control(type="password", id="password", name="password", required)
           .form-actions
             button.btn.btn-danger(type="submit") Add to Blacklist
             button.btn.btn-secondary(type="button", onclick="toggleAddForm()") Cancel
@@ -38,50 +41,88 @@ block content
                 p.blacklist-reason= entry.reason
                 .blacklist-meta
                   // This line handles potential missing dates to prevent errors.
-                  span.blacklist-date Added: #{entry.addedAt ? entry.addedAt.toLocaleDateString() : 'N/A'}
+                  span.blacklist-date Added: #{entry.addedAt ? formatDate(entry.addedAt) : 'N/A'}
               .blacklist-actions
-                // This button now triggers the password prompt when clicked.
-                button.btn.btn-danger.btn-sm(onclick=`removeFromBlacklist('${entry._id}')`) Remove
+                // This button now opens the custom modal
+                button.btn.btn-danger.btn-sm(onclick=`showRemoveModal('${entry._id}')`) Remove
       else
         .empty-state
           .empty-icon 🎉
           h3 No Blacklisted Users
           p The platform is currently free of banned users.
 
-block scripts
+    // Custom Modal for removing a blacklist entry
+    #removeModal.modal.fade(tabindex="-1", aria-labelledby="removeModalLabel", aria-hidden="true")
+      .modal-dialog
+        .modal-content
+          .modal-header
+            h5#removeModalLabel.modal-title Remove from Blacklist
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+          .modal-body
+            p Are you sure you want to remove this user? This action is permanent.
+            .form-group.mt-3
+              label(for="modalPassword") Admin Password
+              input.form-control(type="password", id="modalPassword", required)
+          .modal-footer
+            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Cancel
+            button#confirmRemove.btn.btn-danger(type="button") Confirm Removal
+
+block append scripts
+  script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js")
   script.
     // This function toggles the form's visibility.
     function toggleAddForm() {
       const form = document.getElementById('add-form');
       form.classList.toggle('hidden');
     }
+
+    let currentEntryId = null;
+
+    // This function shows the custom removal modal
+    function showRemoveModal(id) {
+        currentEntryId = id;
+        const removeModal = new bootstrap.Modal(document.getElementById('removeModal'));
+        removeModal.show();
+    }
     
-    // This function handles the password and sends it to the server.
-    async function removeFromBlacklist(id) {
-      if (confirm('Are you sure you want to remove this user from the blacklist?')) {
-        const password = prompt("Please enter the admin password to confirm deletion:");
+    // Event listener for the confirm removal button inside the modal
+    document.getElementById('confirmRemove').addEventListener('click', async () => {
+        const passwordInput = document.getElementById('modalPassword');
+        const password = passwordInput.value;
+        const removeModal = bootstrap.Modal.getInstance(document.getElementById('removeModal'));
+
         if (!password) {
-          return; 
+            console.error('Password is required.');
+            alert('Password is required.'); // Using alert() for a clear user-facing message
+            return;
         }
 
         try {
-          const response = await fetch(`/admin/blacklist/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password })
-          });
-          
-          if (response.ok) {
-            location.reload();
-          } else if (response.status === 401) {
-            alert('Incorrect password. Deletion failed.');
-          } else {
-            alert('Error removing user from blacklist');
-          }
+            const response = await fetch(`/admin/blacklist/${currentEntryId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password })
+            });
+            
+            if (response.ok) {
+                console.log('Successfully removed entry from blacklist.');
+                location.reload();
+            } else if (response.status === 401) {
+                const errorData = await response.json();
+                console.error('Incorrect password:', errorData.message);
+                alert(`Incorrect password. Deletion failed: ${errorData.message}`);
+            } else {
+                console.error(`Server error: ${response.status} ${response.statusText}`);
+                alert('Error removing user from blacklist. Check the console for details.');
+            }
         } catch (error) {
-          alert('Error removing user from blacklist');
+            console.error('Fetch error:', error);
+            alert('An unexpected error occurred. Please try again.');
+        } finally {
+            removeModal.hide();
+            passwordInput.value = '';
+            currentEntryId = null;
         }
-      }
-    }
+    });

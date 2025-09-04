@@ -1,0 +1,95 @@
+extends ../layout
+
+block content
+  .container
+    .page-header
+      h1.page-title Edit Job: #{job.title}
+      p.page-subtitle Make changes to your job posting below.
+
+    .form-container
+      form.job-form(action=`/employer/edit-job/${job._id}`, method="POST", enctype="multipart/form-data")
+        .form-group
+          label(for="title") Job Title
+          input.form-control(type="text", id="title", name="title", required, placeholder="e.g., Bathroom Renovation", value=job.title)
+        
+        .form-group
+          label(for="category") Category
+          select.form-control(id="category", name="category", required)
+            each cat in ['Plumbing', 'Electrical', 'Carpentry', 'Painting', 'Roofing', 'Flooring', 'HVAC', 'General']
+              option(value=cat, selected=(cat === job.category))= cat
+            
+        .form-group
+          label(for="description") Job Description
+          textarea.form-control(id="description", name="description", rows="5", required, placeholder="Provide detailed information about your project...")= job.description
+        
+        .form-group
+          label(for="location") Location
+          input.form-control(type="text", id="location", name="location", required, placeholder="City, State", value=job.location)
+        
+        .form-group
+          label(for="budget") Budget (UGX)
+          input.form-control(type="number", id="budget", name="budget", required, min="0", step="0.01", placeholder="e.g., 500000", value=job.budget)
+
+        // ✅ NEW: Display existing images and provide a delete option
+        if job.images && job.images.length > 0
+          .form-group
+            label Existing Project Photos
+            .existing-images.mt-2
+              each image in job.images
+                .image-preview-container.d-inline-block.me-2.mb-2
+                  img.img-thumbnail(src=image, alt="Existing project photo" style="width: 150px; height: 150px; object-fit: cover;")
+                  .form-check.mt-1.text-center
+                    input.form-check-input(type="checkbox", name="imagesToDelete[]", value=image)
+                    label.form-check-label Delete
+        
+        // Image Upload Section for new photos
+        .form-group
+          label Project Images (Optional)
+          #images-container
+            .image-upload-wrapper.mb-2
+              input.form-control(type="file", name="images", accept="image/*")
+          button.btn.btn-secondary.btn-sm.mt-2#add-image-btn(type="button") Add Another Image
+          small.form-text.text-muted.mt-2 Upload up to 10 images to help craftsmen understand your project
+        
+        .form-actions
+          button.btn.btn-primary(type="submit") Save Changes
+          a.btn.btn-secondary(href=`/employer/applications/${job._id}`) Cancel
+
+  // Script for dynamic image fields
+  script.
+    document.addEventListener("DOMContentLoaded", function () {
+      const container = document.getElementById("images-container");
+      const addBtn = document.getElementById("add-image-btn");
+
+      // The dynamic add/delete functionality for new files
+      addBtn.addEventListener("click", function () {
+        const inputs = container.querySelectorAll("input[type='file']");
+        // Count existing images + new inputs
+        const totalImages = (document.querySelectorAll('.image-preview-container').length) + inputs.length;
+        if (totalImages >= 10) {
+          alert("You can only have up to 10 images in total.");
+          return;
+        }
+
+        const newWrapper = document.createElement("div");
+        newWrapper.classList.add("image-upload-wrapper", "mb-2", "d-flex");
+        
+        const newInput = document.createElement("input");
+        newInput.type = "file";
+        newInput.name = "images";
+        newInput.accept = "image/*";
+        newInput.classList.add("form-control", "me-2");
+        
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Remove";
+        deleteBtn.classList.add("btn", "btn-danger", "btn-sm");
+        deleteBtn.addEventListener("click", function () {
+          newWrapper.remove();
+        });
+
+        newWrapper.appendChild(newInput);
+        newWrapper.appendChild(deleteBtn);
+        container.appendChild(newWrapper);
+      });
+    });

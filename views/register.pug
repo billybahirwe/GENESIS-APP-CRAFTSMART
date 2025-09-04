@@ -29,6 +29,14 @@ block content
               input.form-control(type="password", id="password", name="password", required, placeholder="Choose a secure password")
               i.toggle-password.far.fa-eye
 
+        // ✅ Confirm Password field added
+        .form-row
+          .form-col
+            label(for="confirmPassword") Confirm Password
+            .password-wrapper
+              input.form-control(type="password", id="confirmPassword", name="confirmPassword", required, placeholder="Re-enter your password")
+              i.toggle-password.far.fa-eye
+
         .form-group
           label(for="role") I am a:
           select.form-control(id="role", name="role", required)
@@ -99,26 +107,10 @@ block content
   script.
     document.addEventListener('DOMContentLoaded', () => {
       const districts = {
-        Central: {
-          Kampala: ["Muyenga", "Lweza", "Kabalagala", "Munyonyo", "Ntinda", "Naguru", "Buziga", "Bugolobi", "Makindye", "Kololo", "Kansanga", "Kyambogo", "Rubaga", "Nakawa", "Bukoto", "Kamwokya", "Nsambya", "Bweyogerere", "Namugongo", "Kasubi", "Mutungo", "Kireka", "Mengo", "Kikoni"],
-          Wakiso: ["Entebbe", "Kira", "Nansana", "Kasangati", "Gayaza", "Bulenga"],
-          Mukono: ["Mukono Town", "Seeta", "Namilyango"]
-        },
-        Eastern: {
-          Jinja: ["Bugembe", "Mpumudde", "Wanyange"],
-          Mbale: ["Industrial", "Wanale", "Namakwekwe"],
-          Tororo: ["Malaba", "Mukuju"]
-        },
-        Northern: {
-          Gulu: ["Pece", "Layibi"],
-          Lira: ["Ojwina", "Adyel"],
-          Arua: ["River Oli", "Adumi"]
-        },
-        Western: {
-          Mbarara: ["Kamukuzi", "Kakoba"],
-          Kabale: ["Central", "Kigongi"],
-          FortPortal: ["East Division", "West Division"]
-        }
+        Central: { Kampala: ["Muyenga","Lweza","Kabalagala","Munyonyo","Ntinda","Naguru","Buziga","Bugolobi","Makindye","Kololo","Kansanga","Kyambogo","Rubaga","Nakawa","Bukoto","Kamwokya","Nsambya","Bweyogerere","Namugongo","Kasubi","Mutungo","Kireka","Mengo","Kikoni"], Wakiso: ["Entebbe","Kira","Nansana","Kasangati","Gayaza","Bulenga"], Mukono: ["Mukono Town","Seeta","Namilyango"] },
+        Eastern: { Jinja: ["Bugembe","Mpumudde","Wanyange"], Mbale: ["Industrial","Wanale","Namakwekwe"], Tororo: ["Malaba","Mukuju"] },
+        Northern: { Gulu: ["Pece","Layibi"], Lira: ["Ojwina","Adyel"], Arua: ["River Oli","Adumi"] },
+        Western: { Mbarara: ["Kamukuzi","Kakoba"], Kabale: ["Central","Kigongi"], FortPortal: ["East Division","West Division"] }
       };
 
       const regionSelect = document.getElementById("region");
@@ -167,34 +159,22 @@ block content
         }
       }
 
-      // Add password toggle logic
-      const togglePassword = document.querySelector('.toggle-password');
-      const passwordInput = document.getElementById('password');
-
-      if (togglePassword && passwordInput) {
-        togglePassword.addEventListener('click', () => {
-          // Toggle the type attribute
-          const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-          passwordInput.setAttribute('type', type);
-          
-          // Toggle the icon
-          togglePassword.classList.toggle('fa-eye-slash');
+      // Password toggle logic
+      const togglePassword = document.querySelectorAll('.toggle-password');
+      togglePassword.forEach(t => {
+        const input = t.previousElementSibling;
+        t.addEventListener('click', () => {
+          const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+          input.setAttribute('type', type);
+          t.classList.toggle('fa-eye-slash');
         });
-      }
+      });
 
-      // Add event listeners
       regionSelect.addEventListener('change', populateDistricts);
       districtSelect.addEventListener('change', populateCities);
       roleSelect.addEventListener('change', toggleRoleFields);
 
-      // Call functions initially to handle pre-filled data
-      if (regionSelect.value) {
-        populateDistricts();
-      }
-      if (districtSelect.value) {
-        populateCities();
-      }
-      if (roleSelect.value) {
-        toggleRoleFields();
-      }
+      if (regionSelect.value) populateDistricts();
+      if (districtSelect.value) populateCities();
+      if (roleSelect.value) toggleRoleFields();
     });
