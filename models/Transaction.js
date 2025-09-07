@@ -15,23 +15,26 @@ const transactionSchema = new mongoose.Schema({
     required: true 
   },
 
-  // The user involved in the transaction
+  // The user involved in the transaction (usually employer)
   user: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
   },
 
-  // Unique reference from the payment gateway (e.g., Flutterwave's flwRef or tx_ref)
+  // Unique reference from the payment gateway (Flutterwave tx_ref)
   transactionId: { 
     type: String, 
     unique: true,
-    sparse: true // Allows multiple documents to have null values
+    sparse: true,
+    default: undefined // ✅ important change
   },
 
+  // Gateway’s guaranteed unique reference (flw_ref or transaction id)
   gatewayRef: { 
     type: String, 
     unique: true,
-    sparse: true // Allows multiple documents to have null values
+    sparse: true,
+    required: true
   },
 
   // Status of the transaction

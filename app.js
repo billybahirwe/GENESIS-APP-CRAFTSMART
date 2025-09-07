@@ -148,47 +148,56 @@ const formatCurrency = (amount) => {
 app.post('/api/payment/release/:jobId', requireAuth, requireRole(['employer']), async (req, res) => {
   try {
     const { jobId } = req.params;
-    // Populate the job with the craftsman's details
-    const job = await Job.findById(jobId).populate('craftsman');
 
-    if (!job || job.employer.toString() !== req.user._id.toString()) {
+    // Populate the job with the craftsman's details using craftsmanId
+    const job = await Job.findById(jobId).populate('craftsmanId');
+
+    if (!job || job.employerId.toString() !== req.user._id.toString()) {
       return res.status(404).send('Job not found or you are not the employer.');
     }
-    
+
     if (job.status !== 'paid-in-escrow') {
       return res.status(400).send('Payment is not in escrow for this job.');
     }
-    
+
+    if (!job.craftsmanId) {
+      return res.status(400).send('No craftsman assigned to this job.');
+    }
+
     // Perform the transfer of funds to the craftsman's account
-    // You will need to implement a transfer API call here, e.g., using Flutterwave's Transfers API
-    // The recipient details (bank name, account number) should be stored in the craftsman's profile
-    const transferResponse = await axios.post('https://api.flutterwave.com/v3/transfers', {
-        account_bank: job.craftsman.bank_name, // You will need to add this field to your user model
-        account_number: job.craftsman.bank_account, // Add this to your user model
-        amount: job.craftsmanAmount, // The net amount (90%) for the craftsman
-        currency: "UGX",
+    // Make sure bank_name and bank_account exist in User schema for the craftsman
+    const transferResponse = await axios.post(
+      'https://api.flutterwave.com/v3/transfers',
+      {
+        account_bank: job.craftsmanId.bank_name,       // Ensure this exists in User model
+        account_number: job.craftsmanId.bank_account,  // Ensure this exists in User model
+        amount: job.budget,                            // Or job.craftsmanAmount if calculated
+        currency: 'UGX',
         narration: `Payment for job: ${job.title}`,
-    }, {
+      },
+      {
         headers: {
-            'Authorization': `Bearer YOUR_FLUTTERWAVE_SECRET_KEY` // Replace with your key
-        }
-    });
+          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, // Your Flutterwave secret
+        },
+      }
+    );
 
     if (transferResponse.data.status === 'success') {
       // Update job status to 'disbursed'
       job.status = 'disbursed';
       await job.save();
 
-      // Redirect or send success message
       res.status(200).send('Funds have been successfully released to the craftsman.');
     } else {
+      console.error('Flutterwave transfer failed:', transferResponse.data);
       res.status(500).send('Transfer failed.');
     }
   } catch (error) {
-    console.error('Error releasing payment:', error);
+    console.error('Error releasing payment:', error.response?.data || error.message);
     res.status(500).send('Server error');
   }
 });
+
 // Helper function to format date
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString('en-UG', {
@@ -440,17 +449,19 @@ app.get('/employer/browse-craftsmen', requireAuth, requireRole(['employer']), as
 
 app.get('/employer/payment-records', requireAuth, requireRole(['employer']), async (req, res) => {
   try {
+    // ✅ Fetch deposits (Transfer In)
     const transferInRecords = await Transaction.find({
-      userId: req.user._id,
-      status: { $in: ['COMPLETED', 'PENDING', 'FAILED'] }
+      user: req.user._id,
+      type: 'deposit'
     }).sort({ createdAt: -1 });
 
+    // ✅ Fetch disbursements (Transfer Out)
     const transferOutRecords = await Transaction.find({
-      userId: req.user._id,
-      status: { $in: ['DISBURSEMENT_COMPLETED', 'DISBURSEMENT_INITIATED'] }
+      user: req.user._id,
+      type: 'disbursement'
     }).sort({ createdAt: -1 });
 
-    // Pass helpers to Pug
+    // Render the page
     res.render('employer/payment-records', {
       user: req.user,
       path: req.path,
@@ -903,11 +914,15 @@ app.get("/payment/verify", async (req, res) => {
 
     const employer = await User.findById(job.employerId);
     const craftsman = await User.findById(job.craftsmanId);
-    if (!employer || !craftsman) return res.status(400).send("Verification failed: associated data not found.");
+    if (!employer || !craftsman) {
+      return res.status(400).send("Verification failed: associated data not found.");
+    }
 
     // 3️⃣ Handle transaction after Flutterwave verification
     try {
-      let transaction = await Transaction.findOne({ gatewayRef: fwData.data.flw_ref || fwData.data.id });
+      let transaction = await Transaction.findOne({
+        gatewayRef: fwData.data.flw_ref || fwData.data.id,
+      });
 
       if (transaction) {
         // ✅ Update existing transaction
@@ -926,8 +941,8 @@ app.get("/payment/verify", async (req, res) => {
           type: "deposit",
           job: job._id,
           user: employer._id,
-          craftsmanId: craftsman._id,
           gatewayRef: fwData.data.flw_ref || fwData.data.id,
+          transactionId: fwData.data.tx_ref || undefined, // only if available
           status: "COMPLETED",
           total_amount: fwData.data.amount,
           commission_amount: 0,
@@ -966,6 +981,7 @@ app.get("/payment/verify", async (req, res) => {
     return res.status(500).send("Server error during payment verification.");
   }
 });
+
 
 
 // 💡 NEW ROUTE: To view a craftsman's profile
@@ -1380,61 +1396,6 @@ app.get('/admin/employer/:userId', requireAuth, requireRole(['admin']), async (r
   }
 });
 
-// NOTE: These are placeholders. In a real application, you would define these in separate files.
-// const userSchema = new mongoose.Schema({
-//     username: String,
-//     role: { type: String, enum: ['admin', 'craftsman'], default: 'craftsman' },
-//     approved: { type: Boolean, default: false }
-// });
-
-// const User = mongoose.model('User', userSchema);
-
-// // Connect to a MongoDB database (replace with your actual URI)
-// mongoose.connect('mongodb://localhost:27017/craftsmart', {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true
-// }).then(() => {
-//     console.log('MongoDB connected successfully.');
-// }).catch(err => {
-//     console.error('MongoDB connection error:', err);
-// });
-
-// // Middleware to parse request bodies
-// app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(bodyParser.json());
-
-// // Set up Pug as the view engine
-// app.set('views', path.join(__dirname, 'views'));
-// app.set('view engine', 'pug');
-
-// // --- Placeholder Middleware and Functions ---
-
-// // Placeholder authentication middleware
-// // In a real application, you would use a library like Passport.js
-// // to handle user authentication and roles.
-// const requireAuth = (req, res, next) => {
-//     // This is a dummy user object for testing
-//     req.user = { _id: 'admin-user-id', role: 'admin' };
-//     next();
-// };
-
-// const requireRole = (roles) => (req, res, next) => {
-//     // In a real application, this would check if the user's role is in the roles array
-//     if (roles.includes(req.user.role)) {
-//         next();
-//     } else {
-//         res.status(403).send('Forbidden: Insufficient privileges');
-//     }
-// };
-
-// const formatDate = (date) => {
-//     if (!date) return 'N/A';
-//     return date.toLocaleDateString();
-// };
-
-// --- Your Provided Routes, now integrated and functional ---
-
-// Routes for approving and rejecting a craftsman
 // Routes for approving and rejecting a craftsman
 app.post('/admin/approve-craftsman/:userId', requireAuth, requireRole(['admin']), async (req, res) => {
     const userId = req.params.userId;

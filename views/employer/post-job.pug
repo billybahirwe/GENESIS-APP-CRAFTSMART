@@ -95,25 +95,38 @@ block scripts
       // --- System Fee Notification ---
       const budgetInput = document.getElementById("budget");
       const feeNotification = document.getElementById("fee-notification");
-      const feePercentage = 0.10;       // 10% fee
-      const minFee = 10000;             // Minimum fee in UGX
+      const feePercentage = 0.10;
+      const minFee = 1000;
 
       budgetInput.addEventListener("input", function() {
         const budget = parseFloat(this.value);
-        if (budget > 0) {
-          // Calculate fee: 10% or minimum UGX 10,000
-          const feeAmount = Math.max(budget * feePercentage, minFee);
-          const craftsmanReceives = budget - feeAmount;
+        let message = '';
+        
+        if (isNaN(budget) || budget <= 0) {
+          feeNotification.style.display = "none";
+          return;
+        }
 
-          feeNotification.style.display = "block";
-          feeNotification.innerHTML = `
+        // Calculate fee: 10% or minimum UGX 1,000, whichever is greater.
+        const feeAmount = Math.max(budget * feePercentage, minFee);
+        const craftsmanReceives = budget - feeAmount;
+
+        if (craftsmanReceives < 0) {
+          message = `
+            <p class="mt-2" style="color: red;">
+              <strong>Alert:</strong> The budget is too low. The craftsman's share is less than the system fee of UGX ${feeAmount.toLocaleString('en-UG')}.
+            </p>
+          `;
+        } else {
+          message = `
             <p class="mt-2 text-info">
               <strong>Note:</strong> A system fee of <strong>UGX ${feeAmount.toLocaleString('en-UG')}</strong> will be deducted from the budget.
               The craftsman will receive <strong>UGX ${craftsmanReceives.toLocaleString('en-UG')}</strong>.
             </p>
           `;
-        } else {
-          feeNotification.style.display = "none";
         }
+        
+        feeNotification.style.display = "block";
+        feeNotification.innerHTML = message;
       });
     });

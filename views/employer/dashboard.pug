@@ -63,7 +63,7 @@ block content
                 else if job.status === 'in-progress'
                   a.btn.btn-sm.btn-primary(href=`/employer/deposit-funds/${job._id}`) Make Payment
                 else if job.status === 'paid-in-escrow'
-                  form(action=`/employer/release-funds/${job._id}`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman? This action cannot be undone.');")
+                  form(action=`/api/payment/release/${job._id}`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman? This action cannot be undone.');")
                     button.btn.btn-sm.btn-success(type='submit') Release Funds
                 else if job.status === 'disbursed'
                   button.btn.btn-sm.btn-secondary(disabled) Funds Disbursed
