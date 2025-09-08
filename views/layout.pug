@@ -16,22 +16,22 @@ html(lang="en")
           .logo
             a(href="/") CraftSmart
           
-          //- This is the new, updated navigation block
           nav.nav(id="nav")
             .profile-section
               if user
-                a(href=`/${user.role}/profile`)
-                  if user.profilePicture
-                    img.profile-avatar(src=user.profilePicture, alt="Profile Picture")
-                  else
-                    //- Use the first letter of the user's name as a placeholder
-                    .profile-initial-placeholder #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
-                .profile-details
-                  span.profile-name #{user.name}
+                .profile-info
+                  a(href=`/${user.role}/profile`)
+                    if user.profilePicture
+                      img.profile-avatar(src=user.profilePicture, alt="Profile Picture")
+                    else
+                      .profile-initial-placeholder #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
+                    .profile-details
+                      span.profile-name #{user.name}
               else
-                .profile-initial-placeholder
-                  i.fas.fa-user
-              
+                .profile-info
+                  .profile-initial-placeholder
+                    i.fas.fa-user
+
             ul.nav-list
               if user
                 li
@@ -53,7 +53,7 @@ html(lang="en")
                       i.fas.fa-user-shield
                       span Admin Blacklist
                 if user.role === 'craftsman'
-                  li
+                  li.mobile-only
                     a(href="/craftsman/profile")
                       i.fas.fa-id-badge
                       span My Profile
@@ -61,7 +61,7 @@ html(lang="en")
                   a(href="/public-blacklist")
                     i.fas.fa-ban
                     span Public Blacklist
-                li
+                li.mobile-only
                   a(href="/logout")
                     i.fas.fa-sign-out-alt
                     span Logout

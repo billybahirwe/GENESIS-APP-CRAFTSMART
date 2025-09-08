@@ -13,9 +13,8 @@ body {
     color: #374151;
     margin: 0;
     padding: 0;
-    
     /* Updated background color for all pages */
-    background: #e9eff4; 
+    background: #e9eff4;
 }
 
 .container {
@@ -43,8 +42,8 @@ body.homepage .main {
 }
 
 /* =======================================
-    3. Navigation & Header
-    ====================================== */
+    3. Navigation & Header
+    ====================================== */
 .header {
     background: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -68,9 +67,9 @@ body.homepage .main {
 }
 
 /*
-    -------------------------------
-    Mobile-First Navigation Styles
-    -------------------------------
+    -------------------------------
+    Mobile-First Navigation Styles
+    -------------------------------
 */
 
 .nav {
@@ -93,13 +92,46 @@ body.homepage .main {
 }
 
 .profile-section {
-    display: flex;
-    align-items: center;
+    display: flex; /* Always visible on mobile nav */
+    flex-direction: column;
     padding: 20px 15px;
     background-color: #fff;
     border-bottom: 1px solid #e5e7eb;
     color: #374151;
     cursor: pointer;
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.profile-info a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.profile-avatar, .profile-initial-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+    background-color: #e9eff4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #2563eb;
+    overflow: hidden;
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
 }
 
 .nav-list {
@@ -129,7 +161,6 @@ body.homepage .main {
     background-color: #f0f0f0;
 }
 
-/* Show the mobile menu toggle button */
 .mobile-menu-toggle {
     display: flex;
     flex-direction: column;
@@ -144,27 +175,27 @@ body.homepage .main {
     transition: 0.3s;
 }
 
-/*     -------------------------------
-    Desktop-Specific Styles
-    -------------------------------
+/* -------------------------------
+    Desktop-Specific Styles
+    -------------------------------
 */
 
 @media (min-width: 769px) {
     .nav {
-        /* Reset for desktop view */
         position: static;
         transform: translateX(0);
         box-shadow: none;
         flex-direction: row;
         width: auto;
+        display: flex;
     }
-    
+
     .nav-list {
         flex-direction: row;
         gap: 2rem;
         align-items: center;
     }
-    
+
     .nav-list a {
         padding: 0;
         color: #6b7280;
@@ -176,15 +207,87 @@ body.homepage .main {
         color: #2563eb;
     }
 
-    .profile-section {
-        display: none; /* Hide profile section on desktop */
+    /* Hide mobile-specific elements on desktop */
+    .profile-section, .mobile-only {
+        display: none;
     }
 
     .mobile-menu-toggle {
-        display: none; /* Hide the mobile menu toggle button */
+        display: none;
+    }
+
+    /* Show desktop header icons and profile dropdown */
+    .header-icons, .profile-dropdown {
+        display: flex; /* Ensure the container is visible */
+        align-items: center;
     }
 }
 
+/* --- Profile Dropdown Styling --- */
+.profile-dropdown {
+    position: relative;
+    display: none; /* Hide on mobile by default and show on desktop */
+}
+
+.profile-dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.profile-dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.profile-dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+.profile-dropdown-content a .fas {
+    margin-right: 8px;
+}
+
+.show {
+    display: block;
+}
+
+/* Header Icons */
+.header-icons {
+    display: flex;
+    align-items: center;
+}
+
+.header-icons .nav-icon {
+    position: relative;
+    text-decoration: none;
+    color: #333;
+    font-size: 1.5em;
+    margin-left: 30px;
+}
+
+#notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ff4d4f;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.7em;
+    line-height: 1;
+    text-align: center;
+    pointer-events: none;
+    display: none;
+}
 
 /* =======================================
     4. Sections & Components

@@ -93,7 +93,8 @@ const uploadTemp = multer({ dest: 'uploads/' });
 // --- Existing Middleware ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use(session({
   secret: 'craftsmart-secret-key',
   resave: false,
@@ -1082,11 +1083,24 @@ app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (
   }
 });
 
-// Profile of logged-in craftsman
+
+// GET craftsman profile
 app.get('/craftsman/profile', requireAuth, requireRole(['craftsman']), async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).lean();
+    const userId = req.user._id; // Ensure req.user is the logged-in user object
+    if (!userId) return res.status(400).send('User not authenticated');
+
+    const user = await User.findById(userId).lean();
     if (!user) return res.status(404).send('User not found.');
+
+    // Set default profile if missing
+    const userProfile = user.profile || {
+      communication: 0,
+      technicalSkill: 0,
+      punctuality: 0,
+      quality: 0,
+      safety: 0
+    };
 
     const platformAverage = {
       communication: 75,
@@ -1096,100 +1110,83 @@ app.get('/craftsman/profile', requireAuth, requireRole(['craftsman']), async (re
       safety: 85
     };
 
-    const userProfile = user.profile || {
-      communication: 0,
-      technicalSkill: 0,
-      punctuality: 0,
-      quality: 0,
-      safety: 0
-    };
-
-    const isPending = !user.approved;
-
     res.render('craftsman/profile', {
       user: { ...user, profile: userProfile },
       platformAverage,
       path: req.path,
-      isPending
+      isPending: !user.approved
     });
   } catch (err) {
-    console.error('Error fetching profile:', err);
+    console.error('Error fetching craftsman profile:', err);
     res.status(500).send('Internal Server Error');
   }
 });
 
-// Update profile
-app.post(
-  '/craftsman/profile',
-  requireAuth,
-  requireRole(['craftsman']),
-  upload.fields([
-    { name: 'profilePicture', maxCount: 1 },
-    { name: 'cv', maxCount: 1 },
-    { name: 'coverLetter', maxCount: 1 }
-  ]),
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.user._id);
-      if (!user) return res.status(404).send('User not found.');
+// POST update craftsman profile
+// Middleware to load user from session
+function loadUser(req, res, next) {
+  console.log('Session inside loadUser:', req.session);
+  if (!req.session.userId) return res.status(401).send('Not authenticated');
 
-      if (!user.approved) {
-        return res.status(403).send(
-          'Your profile is pending admin approval and cannot be updated at this time.'
-        );
-      }
+  User.findById(req.session.userId)
+    .then(user => {
+      if (!user) return res.status(404).send('User not found');
+      req.user = user;
+      next();
+    })
+    .catch(err => next(err));
+}
 
-      // Update basic info
-      user.name = req.body.name || user.name;
-      user.email = req.body.email || user.email;
-      user.experience = parseInt(req.body.experience) || user.experience;
+// Multer fields
+const multerFields = upload.fields([
+  { name: 'cv', maxCount: 1 },
+  { name: 'coverLetter', maxCount: 1 },
+  { name: 'profilePicture', maxCount: 1 }
+]);
 
-      // Skills
-      if (req.body.skills) {
-        user.skills = req.body.skills.split(',').map((s) => s.trim());
-      }
+// Profile update route
+app.post('/craftsman/profile', loadUser, multerFields, async (req, res) => {
+  try {
+    const user = req.user;
+    console.log('req.user:', user);
+    console.log('req.body:', req.body);
+    console.log('Uploaded files:', req.files);
 
-      // Location
-      if (req.body.location) {
-        user.location = {
-          city: req.body.location.city || user.location.city,
-          region: req.body.location.region || user.location.region,
-          district: req.body.location.district || user.location.district
-        };
-      }
+    // Update basic info
+    user.name = req.body.name;
+    user.email = req.body.email;
+    user.mobile = req.body.mobile;
+    user.experience = parseInt(req.body.experience || 0, 10);
 
-      // Profile ratings
-      if (req.body.profile) {
-        user.profile = {
-          communication: parseInt(req.body.profile.communication) || user.profile.communication,
-          technicalSkill: parseInt(req.body.profile.technicalSkill) || user.profile.technicalSkill,
-          punctuality: parseInt(req.body.profile.punctuality) || user.profile.punctuality,
-          quality: parseInt(req.body.profile.quality) || user.profile.quality,
-          safety: parseInt(req.body.profile.safety) || user.profile.safety
-        };
-      }
+    // Update location
+    user.location = req.body.location;
 
-      // File uploads
-      if (req.files?.profilePicture?.length > 0) {
-        user.profilePicture = `/uploads/${req.files.profilePicture[0].filename}`;
-      }
-      if (req.files?.cv?.length > 0) {
-        user.cvPath = `/uploads/${req.files.cv[0].filename}`;
-      }
-      if (req.files?.coverLetter?.length > 0) {
-        user.coverLetterPath = `/uploads/${req.files.coverLetter[0].filename}`;
-      }
+    // Update skills
+    user.skills = req.body.skills ? req.body.skills.split(',').map(s => s.trim()) : [];
 
-      user.approved = false;
+    // Update profile ratings (fix technicalSkill mismatch)
+    user.profile = {
+      communication: parseInt(req.body.profile.communication || 0, 10),
+      technicalSkill: parseInt(req.body.profile.technicalSkill || req.body.profile.technicalskill || 0, 10),
+      punctuality: parseInt(req.body.profile.punctuality || 0, 10),
+      quality: parseInt(req.body.profile.quality || 0, 10),
+      safety: parseInt(req.body.profile.safety || 0, 10)
+    };
 
-      await user.save();
-      res.redirect('/craftsman/profile?updated=true');
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      res.status(500).send('Internal Server Error');
-    }
+    // Handle uploaded files
+    if (req.files?.cv?.length) user.cvPath = `/uploads/${req.files.cv[0].filename}`;
+    if (req.files?.coverLetter?.length) user.coverLetterPath = `/uploads/${req.files.coverLetter[0].filename}`;
+    if (req.files?.profilePicture?.length) user.profilePicture = `/uploads/${req.files.profilePicture[0].filename}`;
+
+    await user.save();
+    console.log('User saved successfully!');
+    res.redirect('/craftsman/profile');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
   }
-);
+});
+
 
 // Apply for a job
 app.post('/craftsman/apply-for-job/:jobId', requireAuth, requireRole(['craftsman']), async (req, res) => {
@@ -1407,6 +1404,20 @@ app.post('/admin/approve-craftsman/:userId', requireAuth, requireRole(['admin'])
         res.status(500).send('Internal Server Error');
     }
 });
+
+app.post('/admin/approve/:id', requireAuth, requireRole(['admin']), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).send('User not found');
+    user.approved = true;
+    await user.save();
+    res.redirect(`/admin/user/${user._id}`); // or back to list
+  } catch (err) {
+    console.error('Error approving user:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
 
 app.post('/admin/reject-craftsman/:userId', requireAuth, requireRole(['admin']), async (req, res) => {
     const userId = req.params.userId;

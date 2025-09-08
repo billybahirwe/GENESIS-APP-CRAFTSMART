@@ -42,26 +42,27 @@ block content
           .info-row
             strong Files:
             if user.cvPath
-              a(href=`/uploads/${user.cvPath}`, target="_blank") View CV
+              a(href=`${user.cvPath}`, target="_blank") View CV
             else
               span N/A
             if user.coverLetterPath
-              a(href=`/uploads/${user.coverLetterPath}`, target="_blank") View Cover Letter
+              a(href=`${user.coverLetterPath}`, target="_blank") View Cover Letter
             else
               span N/A
-        
-        //- Employer-specific details
-        if user.role === 'employer'
+
+          //- Approval Status
           .info-row
-            strong Company:
-            span= user.company
-          .info-row
-            strong Position:
-            span= user.position
-          .info-row
-            strong Industry:
-            span= user.industry
+            strong Status:
+            if user.approved
+              span.text-success Approved
+            else
+              span.text-warning Pending
     
     .profile-actions
       a.btn.btn-secondary(href="/admin/craftsmen" class=(user.role === 'craftsman' ? '' : 'hidden')) Back to Craftsmen
       a.btn.btn-secondary(href="/admin/employers" class=(user.role === 'employer' ? '' : 'hidden')) Back to Employers
+
+      //- Show Approve button if craftsman is pending
+      if user.role === 'craftsman' && !user.approved
+        form(method="POST", action=`/admin/approve/${user._id}`)
+          button.btn.btn-success(type="submit") Approve Profile

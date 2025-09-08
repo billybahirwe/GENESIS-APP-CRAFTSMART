@@ -29,13 +29,14 @@ block content
               
               // Profile Picture
               .form-group.profile-picture-upload
-                label(for="profilePicture") Upload New Profile Picture
+                label(for="profilePicture") Profile Picture
                 .profile-picture-preview
                   if user.profilePicture
                     img(src=user.profilePicture, alt="Current Profile Picture")
+                    button.btn.btn-sm.btn-secondary(type="button", onclick="document.getElementById('profilePicture').click()") Edit
                   else
                     .placeholder Select Image
-                input.form-control(type="file", id="profilePicture", name="profilePicture", accept="image/*")
+                input.form-control(type="file", id="profilePicture", name="profilePicture", accept="image/*", style="display:none")
 
               // Basic Info
               .form-row
@@ -47,8 +48,8 @@ block content
                   input.form-control(type="email", id="email", name="email", value=user.email || '', required)
 
               .form-group
-                label(for="phone") Phone Number
-                input.form-control(type="tel", id="phone", name="phone", value=user.phone || '', placeholder="+1234567890", required)
+                label(for="mobile") Mobile Number
+                input.form-control(type="tel", id="mobile", name="mobile", value=user.mobile || '', placeholder="+1234567890", required)
 
               // Location
               .form-row
@@ -110,6 +111,25 @@ block content
               .legend-item
                 .legend-color.legend-platform
                 span Platform Average
+
+    // Inline CSS for stars
+    style.
+      .star {
+        cursor: pointer;
+        font-size: 24px;
+        color: #ccc; /* default gray */
+        transition: color 0.2s;
+        display: inline-block;
+        margin-right: 2px;
+      }
+
+      .star.selected {
+        color: gold; /* highlighted star */
+      }
+
+      .star:hover {
+        color: orange; /* hover effect */
+      }
 
 block scripts
   script(src="https://cdn.jsdelivr.net/npm/chart.js")
