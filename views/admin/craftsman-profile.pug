@@ -36,20 +36,37 @@ block content
         .details-group
           strong Skills:
           span= user.skills ? user.skills.join(', ') : 'N/A'
-        
-        h3 Documents
-        .details-group
-          strong CV:
-          if user.cvPath
-            a(href=user.cvPath, target="_blank") View CV
+
+        // ⭐ Rate this Craftsman
+        h3 Rate this Craftsman
+        form#ratingForm(method="POST", action=`/rate-craftsman/${user._id}`)
+          .star-rating
+            - const employerRating = user.employerRating || 0; // backend should provide current employer's rating
+            - for (let i = 5; i >= 1; i--)
+              input.star(type="radio", name="rating", id=`star-${i}`, value=i, required, checked=(employerRating === i))
+              label(for=`star-${i}`) ★
+          .feedback-input
+            textarea(name="comment", placeholder="Leave feedback...", rows="2")
+          button.btn.btn-primary.btn-sm(type="submit") Submit Feedback
+
+        // 📝 Feedback & Testimonials
+        h3 Feedback & Testimonials
+        .feedback-list#feedbackList
+          if user.feedbacks && user.feedbacks.length
+            each feedback in user.feedbacks
+              .feedback-card
+                .feedback-header
+                  strong #{feedback.employerName}
+                  span.feedback-date #{new Date(feedback.date).toLocaleDateString()}
+                .feedback-stars
+                  - for (let i = 1; i <= 5; i++)
+                    if i <= feedback.rating
+                      i.fas.fa-star
+                    else
+                      i.far.fa-star
+                p.feedback-comment #{feedback.comment}
           else
-            span Not uploaded
-        .details-group
-          strong Cover Letter:
-          if user.coverLetterPath
-            a(href=user.coverLetterPath, target="_blank") View Cover Letter
-          else
-            span Not uploaded
+            p No feedback available yet.
 
       .profile-chart-section
         .chart-container
@@ -67,130 +84,271 @@ block content
 block scripts
   script(src="https://cdn.jsdelivr.net/npm/chart.js")
   script.
-    // CSS for the chart and other layout elements
+    // --- Style Injection ---
     const style = document.createElement('style');
     style.innerHTML = `
-      .profile-container {
-        display: flex;
-        gap: 30px;
-        align-items: flex-start;
-      }
-      .profile-details-section {
-        flex: 1;
-      }
-      .profile-chart-section {
-        flex: 1;
-        position: sticky;
-        top: 50px;
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      .profile-picture-section img {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-      .profile-picture-section .profile-initial {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        background-color: #f0f4f8;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 4rem;
-        font-weight: bold;
-        color: #6b7280;
-      }
-      .chart-legend {
-        display: flex;
-        justify-content: center;
-        margin-top: 1rem;
-      }
-      .legend-item {
-        display: flex;
-        align-items: center;
-        margin: 0 10px;
-      }
-      .legend-color {
-        width: 20px;
-        height: 20px;
-        margin-right: 8px;
-      }
-      .legend-user {
-        background-color: rgba(37, 99, 235, 1);
-      }
-      .legend-platform {
-        background-color: rgba(156, 163, 175, 1);
-      }
+      .profile-container { display: flex; gap: 30px; align-items: flex-start; }
+      .profile-details-section { flex: 1; }
+      .profile-chart-section { flex: 1; position: sticky; top: 50px; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      .profile-picture-section img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; }
+      .profile-picture-section .profile-initial { width: 150px; height: 150px; border-radius: 50%; background-color: #f0f4f8; display: flex; align-items: center; justify-content: center; font-size: 4rem; font-weight: bold; color: #6b7280; }
+
+      /* Star Rating */
+      .star-rating { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 5px; margin-bottom: 6px; }
+      .star-rating input.star { display: none; }
+      .star-rating label { font-size: 1.5rem; color: #ddd; cursor: pointer; transition: color 0.2s; }
+      .star-rating input.star:checked ~ label,
+      .star-rating label:hover,
+      .star-rating label:hover ~ label { color: #FFC107; }
+
+      .feedback-input textarea { width: 100%; resize: none; font-size: 0.85rem; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; margin-bottom: 6px; }
+
+      /* Feedback cards */
+      .feedback-list { display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; }
+      .feedback-card { background: #f3f4f6; padding: 8px 10px; border-radius: 6px; }
+      .feedback-header { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+      .feedback-stars i { color: #FFC107; margin-right: 2px; }
+      .feedback-comment { font-size: 0.85rem; color: #374151; margin-top: 2px; }
     `;
     document.head.appendChild(style);
 
+    // --- Skill Chart ---
     const ctx = document.getElementById('skillChart').getContext('2d');
-    
-    // The user's profile data
     const userSkills = !{JSON.stringify(user.profile || {})};
-    // The platform average data (if you are passing it)
     const platformAverage = !{JSON.stringify(platformAverage || {})};
 
     new Chart(ctx, {
       type: 'radar',
       data: {
         labels: ['Communication', 'Technical Skill', 'Punctuality', 'Quality', 'Safety'],
-        datasets: [{
-          label: 'User Skills',
-          // Correctly scale the data from a 1-5 rating to a 0-100 scale for the chart
-          data: [
-            (userSkills.communication || 0) * 20,
-            (userSkills.technicalSkill || 0) * 20,
-            (userSkills.punctuality || 0) * 20,
-            (userSkills.quality || 0) * 20,
-            (userSkills.safety || 0) * 20
-          ],
-          backgroundColor: 'rgba(37, 99, 235, 0.2)',
-          borderColor: 'rgba(37, 99, 235, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(37, 99, 235, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(37, 99, 235, 1)'
-        }, {
-          label: 'Platform Average',
-          data: [
-            (platformAverage.communication || 0) * 20,
-            (platformAverage.technicalSkill || 0) * 20,
-            (platformAverage.punctuality || 0) * 20,
-            (platformAverage.quality || 0) * 20,
-            (platformAverage.safety || 0) * 20
-          ],
-          backgroundColor: 'rgba(156, 163, 175, 0.2)',
-          borderColor: 'rgba(156, 163, 175, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(156, 163, 175, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(156, 163, 175, 1)'
-        }]
+        datasets: [
+          {
+            label: 'User Skills',
+            data: [
+              (userSkills.communication || 0) * 20,
+              (userSkills.technicalSkill || 0) * 20,
+              (userSkills.punctuality || 0) * 20,
+              (userSkills.quality || 0) * 20,
+              (userSkills.safety || 0) * 20
+            ],
+            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+            borderColor: 'rgba(37, 99, 235, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+            pointBorderColor: '#fff'
+          },
+          {
+            label: 'Platform Average',
+            data: [
+              (platformAverage.communication || 0) * 20,
+              (platformAverage.technicalSkill || 0) * 20,
+              (platformAverage.punctuality || 0) * 20,
+              (platformAverage.quality || 0) * 20,
+              (platformAverage.safety || 0) * 20
+            ],
+            backgroundColor: 'rgba(156, 163, 175, 0.2)',
+            borderColor: 'rgba(156, 163, 175, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(156, 163, 175, 1)',
+            pointBorderColor: '#fff'
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 20
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
+        scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } },
+        plugins: { legend: { display: false } }
       }
     });
+
+    // --- Feedback AJAX ---
+    const feedbackForm = document.getElementById('ratingForm');
+    const feedbackList = document.getElementById('feedbackList');
+
+    feedbackForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        rating: feedbackForm.rating.value,
+        comment: feedbackForm.comment.value
+      };
+
+      try {
+        const response = await fetch(feedbackForm.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          const fb = result.feedback;
+          const card = document.createElement('div');
+          card.className = 'feedback-card';
+          card.innerHTML = `
+            <div class="feedback-header">
+              <strong>${fb.employerName}</strong>
+              <span class="feedback-date">${new Date(fb.date).toLocaleDateString()}</span>
+            </div>
+            <div class="feedback-stars">
+              ${'<i class="fas fa-star"></i>'.repeat(fb.rating)}
+              ${'<i class="far fa-star"></i>'.repeat(5 - fb.rating)}
+            </div>
+            <p class="feedback-comment">${fb.comment || ''}</p>
+          `;
+          feedbackList.prepend(card);
+
+          // ⭐ Keep stars highlighted
+          const selectedStar = document.getElementById(`star-${data.rating}`);
+          if (selectedStar) selectedStar.checked = true;
+
+          // Clear only comment box
+          feedbackForm.comment.value = '';
+
+          alert('Feedback submitted successfully!');
+        } else {
+          alert(result.message || 'Error submitting feedback.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Server error. Try again later.');
+      }
+    });
+
+
+
+
+
+
+//- extends ../layout
+
+//- block content
+//-   .row
+//-     .col-12
+//-       .d-flex.justify-content-between.align-items-center.mb-4
+//-         h1.mb-0
+//-           i.bi.bi-person-circle.me-2
+//-           | Craftsman Profile
+//-         a.btn.btn-secondary(href="/admin/reports")
+//-           i.bi.bi-arrow-left.me-2
+//-           | Back to Reports
+
+//-   .row
+//-     .col-lg-4.mb-4
+//-       .card.shadow-sm
+//-         .card-body.text-center
+//-           .mb-3
+//-             if user.profilePicture
+//-               img.rounded-circle.mb-3(src=user.profilePicture alt="Profile Picture" width="120" height="120")
+//-             else
+//-               .bg-secondary.rounded-circle.mx-auto.mb-3.d-flex.align-items-center.justify-content-center(style="width: 120px; height: 120px;")
+//-                 i.bi.bi-person.text-white(style="font-size: 3rem;")
+//-           h3.card-title #{user.name}
+//-           p.text-muted
+//-             i.bi.bi-envelope.me-2
+//-             | #{user.email || 'No email provided'}
+//-           p.text-muted
+//-             i.bi.bi-phone.me-2
+//-             | #{user.mobile || 'No mobile provided'}
+          
+//-           .badge.bg-primary.fs-6.px-3.py-2
+//-             i.bi.bi-tools.me-2
+//-             | #{user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+
+//-     .col-lg-8
+//-       .row.mb-4
+//-         .col-12
+//-           .card.shadow-sm
+//-             .card-header.bg-dark.text-white
+//-               h5.mb-0
+//-                 i.bi.bi-info-circle.me-2
+//-                 | Personal Information
+//-             .card-body
+//-               .row
+//-                 .col-md-6
+//-                   h6.text-muted Location
+//-                   if user.location && (user.location.city || user.location.district || user.location.region)
+//-                     p.mb-3
+//-                       if user.location.city
+//-                         i.bi.bi-geo-alt.me-2
+//-                         | #{user.location.city}
+//-                         if user.location.district
+//-                           | , #{user.location.district}
+//-                         if user.location.region
+//-                           | , #{user.location.region}
+//-                       else
+//-                         span.text-muted Not specified
+//-                   else
+//-                     p.text-muted.mb-3 Location not specified
+                  
+//-                   h6.text-muted Experience
+//-                   p.mb-3
+//-                     if user.experience
+//-                       span.badge.bg-info.fs-6 #{user.experience} years
+//-                     else
+//-                       span.text-muted Not specified
+                
+//-                 .col-md-6
+//-                   h6.text-muted Skills
+//-                   if user.skills && user.skills.length > 0
+//-                     .mb-3
+//-                       each skill in user.skills
+//-                         span.badge.bg-secondary.me-2.mb-1 #{skill}
+//-                   else
+//-                     p.text-muted.mb-3 No skills listed
+                  
+//-                   h6.text-muted Documents
+//-                   .mb-3
+//-                     if user.cvPath
+//-                       a.btn.btn-outline-primary.btn-sm.me-2.mb-1(href=user.cvPath target="_blank")
+//-                         i.bi.bi-file-earmark-pdf.me-1
+//-                         | CV
+//-                     if user.coverLetterPath
+//-                       a.btn.btn-outline-primary.btn-sm.mb-1(href=user.coverLetterPath target="_blank")
+//-                         i.bi.bi-file-earmark-text.me-1
+//-                         | Cover Letter
+//-                     if !user.cvPath && !user.coverLetterPath
+//-                       span.text-muted No documents uploaded
+
+//-       .row
+//-         .col-12
+//-           .card.shadow-sm
+//-             .card-header.bg-success.text-white
+//-               h5.mb-0
+//-                 i.bi.bi-star.me-2
+//-                 | Performance Ratings
+//-             .card-body
+//-               if user.profile && (user.profile.communication || user.profile.technicalSkill || user.profile.punctuality || user.profile.quality || user.profile.safety)
+//-                 .row
+//-                   .col-md-6
+//-                     h6.mb-3 User Ratings
+//-                     each rating, category in user.profile
+//-                       if rating
+//-                         .d-flex.justify-content-between.align-items-center.mb-2
+//-                           span.fw-medium #{category.charAt(0).toUpperCase() + category.slice(1).replace(/([A-Z])/g, ' $1')}:
+//-                           .d-flex.align-items-center
+//-                             .progress.me-2(style="width: 100px; height: 8px;")
+//-                               .progress-bar.bg-primary(style=`width: ${(rating / 5) * 100}%`)
+//-                             span.badge.bg-primary #{rating}/5
+                  
+//-                   .col-md-6
+//-                     h6.mb-3 Platform Average
+//-                     each avgRating, category in platformAverage
+//-                       .d-flex.justify-content-between.align-items-center.mb-2
+//-                         span.fw-medium #{category.charAt(0).toUpperCase() + category.slice(1).replace(/([A-Z])/g, ' $1')}:
+//-                         .d-flex.align-items-center
+//-                           .progress.me-2(style="width: 100px; height: 8px;")
+//-                             .progress-bar.bg-secondary(style=`width: ${(avgRating / 5) * 100}%`)
+//-                           span.badge.bg-secondary #{avgRating}/5
+//-               else
+//-                 .text-center.py-4
+//-                   i.bi.bi-star.display-4.text-muted
+//-                   h5.mt-3.text-muted No Ratings Available
+//-                   p.text-muted This craftsman hasn't received any performance ratings yet.
+
+
+
+
+
+
+

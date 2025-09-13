@@ -10,7 +10,7 @@ block content
           p Your profile is under review. You'll be notified once approved.
       else
         p.dashboard-subtitle Find your next project and grow your business
-    
+
     .dashboard-stats
       .stat-card
         .stat-icon 📋
@@ -27,7 +27,7 @@ block content
         .stat-info
           .stat-number= user.rating || 'New'
           .stat-label Rating
-    
+
     if user.approved
       .dashboard-section
         h2 Available Jobs
@@ -38,21 +38,27 @@ block content
                 h3.job-title= job.title
                 p.job-description= job.description
                 .job-meta
-                  span.job-location 📍 #{job.location}
-                  // Change from dollars to Ugandan Shillings
+                  span.job-location 📍 #{job.locationName}
+                  // Display distance if available
+                  if job.distanceKm
+                    span.job-distance 🛣️ #{job.distanceKm.toFixed(1)} km away
+                    // Far job warning using only CSS class
+                    if job.isFar
+                      span.job-warning
+                        i.fas.fa-exclamation-triangle
+                        | This job is far! Consider travel costs before applying
                   span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                   span.job-category 🏷️ #{job.category}
                 .job-actions
                   form.inline-form(action=`/craftsman/apply-for-job/${job._id}`, method="POST")
                     button.btn.btn-primary.btn-sm(type="submit") Apply for Job
-                  // This is now a link to a new page to view job details
                   a.btn.btn-secondary.btn-sm(href=`/craftsman/jobs/${job._id}`) View Details
         else
           .empty-state
             .empty-icon 📋
             h3 No Available Jobs
             p Check back later for new opportunities
-    
+
     if myJobs.length > 0
       .dashboard-section
         h2 My Active Jobs
@@ -62,13 +68,12 @@ block content
               h3.job-title= job.title
               p.job-description= job.description
               .job-meta
-                span.job-location 📍 #{job.location}
-                // Change from dollars to Ugandan Shillings
+                span.job-location 📍 #{job.locationName}
                 span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
                 span.job-status(class=`status-${job.status}`)= job.status
               .job-actions
                 a.btn.btn-secondary.btn-sm(href=`/craftsman/jobs/${job._id}`) View Details
                 if job.status === 'SUCCESSFUL'
-                  p.payment-status(style='color: #FFC107; font-weight: bold;') Employer has paid. Funds pending release.
+                  p.payment-status.status-warning Employer has paid. Funds pending release.
                 else if job.status === 'COMPLETED'
-                  p.payment-status(style='color: #4CAF50; font-weight: bold;') Funds received!
+                  p.payment-status.status-success Funds received!

@@ -1391,6 +1391,418 @@ label {
     margin: auto;
 }
 
+/* Admin Panel Styling */
+:root {
+  --primary-color: #444A6D;
+  --secondary-color: #6b7280;
+  --success-color: #16a34a;
+  --danger-color: #dc2626;
+  --warning-color: #f59e0b;
+  --info-color: #0ea5e9;
+  --light-color: #f8f9fa;
+  --dark-color: #212529;
+}
+
+/* Custom Button Styles */
+ .btn {
+  display: inline-block;
+  padding: 12px 24px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Button Variants */
+.btn-primary { 
+  background: var(--primary-color); 
+  color: white; 
+  border: 2px solid var(--primary-color);
+}
+.btn-primary:hover { 
+  background: #3a4060; 
+  border-color: #3a4060;
+  color: white;
+}
+
+.btn-secondary { 
+  background: var(--secondary-color); 
+  color: white; 
+  border: 2px solid var(--secondary-color);
+}
+.btn-secondary:hover { 
+  background: #4b5563; 
+  border-color: #4b5563;
+  color: white;
+}
+
+.btn-success { 
+  background: var(--success-color); 
+  color: white; 
+  border: 2px solid var(--success-color);
+}
+.btn-success:hover { 
+  background: #15803d; 
+  border-color: #15803d;
+  color: white;
+}
+
+.btn-danger { 
+  background: var(--danger-color); 
+  color: white; 
+  border: 2px solid var(--danger-color);
+}
+.btn-danger:hover { 
+  background: #b91c1c; 
+  border-color: #b91c1c;
+  color: white;
+}
+
+.btn-info { 
+  background: var(--info-color); 
+  color: white; 
+  border: 2px solid var(--info-color);
+}
+.btn-info:hover { 
+  background: #0284c7; 
+  border-color: #0284c7;
+  color: white;
+}
+
+.btn-warning { 
+  background: var(--warning-color); 
+  color: white; 
+  border: 2px solid var(--warning-color);
+}
+.btn-warning:hover { 
+  background: #d97706; 
+  border-color: #d97706;
+  color: white;
+} 
+
+/* Button Sizes */
+.btn-sm { 
+  padding: 6px 12px; 
+  font-size: 0.875rem; 
+  border-radius: 6px;
+}
+
+.btn-lg { 
+  padding: 16px 32px; 
+  font-size: 1.125rem; 
+  border-radius: 10px;
+}
+
+/* Outline Button Variants */
+.btn-outline-primary {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-outline-light {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: white;
+}
+
+/* Card Enhancements */
+.card {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  padding: 1.25rem;
+  border-bottom: none;
+  font-weight: 600;
+}
+
+/* Table Enhancements */
+.table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(68, 74, 109, 0.05);
+}
+
+.table-warning {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+/* Badge Styling */
+.badge {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.badge.fs-6 {
+  font-size: 0.875rem !important;
+  padding: 0.6rem 1rem;
+}
+
+/* Progress Bar Styling */
+.progress {
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* Modal Enhancements */
+.modal-content {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Form Enhancements */
+.form-control, .form-select {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(68, 74, 109, 0.25);
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Navigation Enhancements */
+.navbar-nav .nav-link {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.navbar-nav .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Alert Enhancements */
+.alert {
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-weight: 500;
+}
+
+.alert-success {
+  background-color: rgba(22, 163, 74, 0.1);
+  color: #15803d;
+  border-left: 4px solid var(--success-color);
+}
+
+.alert-danger {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  border-left: 4px solid var(--danger-color);
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border-left: 4px solid var(--warning-color);
+}
+
+/* Utility Classes */
+.hidden { 
+  display: none !important; 
+}
+
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .btn-lg {
+    padding: 14px 28px;
+    font-size: 1rem;
+  }
+  
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .navbar-nav {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Loading Spinner */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Far job warning badge */
+.job-warning {
+  display: inline-block;
+  background-color: #4deaff; /* info/warning color */
+  color: #000; /* black text for readability */
+  font-weight: 600;
+  padding: 2px 8px; /* reduced padding */
+  border-radius: 20px; /* pill shape */
+  margin-left: 6px;
+  font-size: 0.75rem; /* smaller font */
+  opacity: 0;
+  transform: translateY(-10px) scale(0.8);
+  animation: pop-in-float 0.8s forwards, float-up-down 2s ease-in-out infinite 1s;
+  box-shadow: 0 0 4px rgba(77, 234, 255, 0.3);
+}
+
+/* Icon styling */
+.job-warning i {
+  margin-right: 4px;
+  color: #000;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+/* Pop-in animation */
+@keyframes pop-in-float {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Gentle floating up/down for attention */
+@keyframes float-up-down {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
+
+
+/* Optional: payment-status colors */
+.status-warning {
+  color: #FFC107;
+  font-weight: bold;
+}
+
+.status-success {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+
 /* =======================================
     12. Media Queries (Responsive Design)
     ======================================= */

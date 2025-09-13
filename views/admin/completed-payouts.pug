@@ -1,0 +1,39 @@
+extends ../layout
+
+block append head
+  link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
+
+block content
+  .container
+    .dashboard-header
+      h1.dashboard-title Completed Payouts
+      p.dashboard-subtitle View all completed payouts to craftsmen
+
+    if completedPayouts && completedPayouts.length > 0
+      table.table.table-striped(style="margin-top:1rem;")
+        thead
+          tr
+            th Job Title
+            th Craftsman
+            th Craftsman Phone
+            th Amount Paid
+            th Platform Fee
+            th Confirmed By
+            th Paid At
+        tbody
+          each payout in completedPayouts
+            tr
+              td= payout.jobTitle || 'N/A'
+              td= payout.craftsman || 'N/A'
+              td= payout.craftsmanPhone || 'N/A'
+              td UGX #{payout.amountPaid ? payout.amountPaid.toLocaleString('en-UG') : '0'}
+              td UGX #{payout.platformFee ? payout.platformFee.toLocaleString('en-UG') : '0'}
+              td= payout.confirmedBy || 'N/A'
+              td= payout.paidAt ? payout.paidAt.toLocaleString() : 'N/A'
+    else
+      .empty-state(style="margin-top:1rem; text-align:center;")
+        i.fas.fa-check-circle(style="font-size:3rem; color:green;")
+        h3 No Completed Payouts
+        p No payouts have been processed yet
+
+    a.btn.btn-secondary(href="/admin/dashboard") ← Back to Dashboard

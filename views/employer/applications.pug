@@ -17,7 +17,7 @@ block content
             .craftsman-info
               h3.craftsman-name= application.craftsmanId.name
               p.craftsman-profile-link
-                a(href=`/craftsman/${application.craftsmanId._id}`) View Profile
+                a(href=`/employer/craftsman/${application.craftsmanId._id}`) View Profile
             
             .application-status-container
               span.application-status(class=`status-${application.status}`)= application.status

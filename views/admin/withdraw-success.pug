@@ -1,0 +1,34 @@
+extends ../layout
+
+block content
+  .container.mt-5
+    .card.shadow-lg.p-4
+      .card-body
+        h2.text-success.mb-3 ✅ Admin Withdrawal Successful
+        p.lead.text-muted The withdrawal was processed successfully. Here are the details:
+
+        ul.list-group.mt-3
+          li.list-group-item
+            strong Type: 
+            | #{transaction.type}
+          li.list-group-item
+            strong Status: 
+            span.badge.bg-success #{transaction.status}
+          li.list-group-item
+            strong Amount Withdrawn: 
+            | UGX #{transaction.total_amount.toLocaleString('en-UG')}
+          li.list-group-item
+            strong Reference: 
+            code #{transaction.disbursement_reference}
+          li.list-group-item
+            strong Gateway Ref: 
+            code #{transaction.gatewayRef}
+          li.list-group-item
+            strong Paid At: 
+            | #{new Date(transaction.paid_at).toLocaleString()}
+          li.list-group-item
+            strong Created At: 
+            | #{new Date(transaction.createdAt).toLocaleString()}
+
+        .mt-4
+          a.btn.btn-primary(href="/admin/dashboard") ← Back to Dashboard

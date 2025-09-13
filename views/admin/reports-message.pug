@@ -1,79 +1,299 @@
 extends ../layout
 
-block append head
-  link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
-
 block content
-  .container
-    .dashboard-header
-      h1.dashboard-title Customer Reports
-      p.dashboard-subtitle View and manage reports submitted by employers.
-    
-    .dashboard-section
-      if reports && reports.length > 0
-        table.table.table-striped
-          thead
-            tr
-              th Report Subject
-              th Craftsman Reported
-              th Submitted By
-              th Date
-              th Actions
-          tbody
-            each report in reports
-              tr
-                td= report.reportSubject
-                td= report.craftsmanName
-                td= report.employerId
-                td= report.timestamp.toLocaleDateString()
-                td
-                  button.btn.btn-sm.btn-info(data-bs-toggle="modal", data-bs-target="#reportModal", data-report=JSON.stringify(report)) View Details
-      else
-        .empty-state
-          .empty-icon
-            i.fas.fa-inbox
-          h3 No New Reports
-          p You're all caught up! There are no new reports from employers.
+  .row
+    .col-12
+      h1.mb-4
+        i.bi.bi-flag.me-2
+        | Reports Management
+        span.badge.bg-danger.ms-2 #{reports.filter(r => !r.seen).length} New
 
-    // Modal for viewing full report
-    #reportModal.modal.fade(tabindex="-1", aria-labelledby="reportModalLabel", aria-hidden="true")
-      .modal-dialog
-        .modal-content
-          .modal-header
-            h5#reportModalLabel.modal-title Report Details
-            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
-          .modal-body
-            p
-              strong Subject: 
-              span#modalSubject
-            p
-              strong Craftsman Name: 
-              span#modalCraftsmanName
-            p
-              strong Submitted by Employer ID: 
-              span#modalEmployerId
-            p
-              strong Date Submitted: 
-              span#modalDate
-            hr
-            h6 Report Message:
-            p#modalMessage
-          .modal-footer
-            button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Close
-            
-block append scripts
-  script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js")
+  .row
+    .col-12
+      .card.shadow-sm
+        .card-header.bg-dark.text-white
+          h5.mb-0
+            i.bi.bi-exclamation-triangle.me-2
+            | User Reports (#{reports.length})
+        .card-body.p-0
+          if reports.length === 0
+            .text-center.py-5
+              i.bi.bi-check-circle.display-1.text-success
+              h4.mt-3 No Reports
+              p.text-muted All reports have been addressed.
+          else
+            .table-responsive
+              table.table.table-hover.mb-0
+                thead.table-dark
+                  tr
+                    th Status
+                    th Subject
+                    th Craftsman
+                    th Employer
+                    th Date
+                    th Actions
+                tbody
+                  each report in reports
+                    tr(class=report.seen ? '' : 'table-warning')
+                      td
+                        if report.seen
+                          span.badge.bg-success
+                            i.bi.bi-eye.me-1
+                            | Seen
+                        else
+                          span.badge.bg-danger
+                            i.bi.bi-eye-slash.me-1
+                            | New
+                      td
+                        strong #{report.reportSubject}
+                      td
+                        if report.craftsmanId && report.craftsmanId.name
+                          a.text-decoration-none(href=`/admin/craftsman/${report.craftsmanId._id}`)
+                            i.bi.bi-person.me-1
+                            | #{report.craftsmanId.name}
+                        else if report.craftsmanName
+                          span.text-muted
+                            i.bi.bi-person.me-1
+                            | #{report.craftsmanName}
+                        else
+                          span.text-muted Unknown
+                      td
+                        if report.employerId
+                          span
+                            i.bi.bi-building.me-1
+                            | #{report.employerId.name}
+                          br
+                          small.text-muted #{report.employerId.mobile}
+                        else
+                          span.text-muted Unknown
+                      td
+                        small.text-muted #{new Date(report.timestamp).toLocaleString()}
+                      td
+                        button.btn.btn-primary.btn-sm.me-2(
+                          data-bs-toggle="modal" 
+                          data-bs-target="#reportModal" 
+                          onclick=`showReportDetails('${report._id}', '${report.reportSubject}', '${report.reportMessage}', '${report.craftsmanName || (report.craftsmanId ? report.craftsmanId.name : 'Unknown')}', '${report.employerId ? report.employerId.name : 'Unknown'}', '${new Date(report.timestamp).toLocaleString()}')`
+                        )
+                          i.bi.bi-eye.me-1
+                          | View
+                        if !report.seen
+                          button.btn.btn-success.btn-sm(onclick=`markAsSeen('${report._id}')`)
+                            i.bi.bi-check.me-1
+                            | Mark Seen
+
+  // Report Details Modal
+  .modal.fade#reportModal(tabindex="-1")
+    .modal-dialog.modal-lg
+      .modal-content
+        .modal-header.bg-info.text-white
+          h5.modal-title
+            i.bi.bi-flag.me-2
+            | Report Details
+          button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
+        .modal-body
+          .row
+            .col-md-6
+              h6.text-muted Subject
+              p#modalSubject.fw-bold
+              
+              h6.text-muted.mt-3 Craftsman
+              p#modalCraftsman
+              
+              h6.text-muted.mt-3 Employer
+              p#modalEmployer
+              
+              h6.text-muted.mt-3 Date Reported
+              p#modalDate
+            .col-md-6
+              h6.text-muted Message
+              .border.p-3.bg-light.rounded
+                p#modalMessage.mb-0
+        .modal-footer
+          button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Close
+          button.btn.btn-success#modalMarkSeenBtn(onclick="markAsSeenFromModal()" style="display: none")
+            i.bi.bi-check.me-2
+            | Mark as Seen
+
   script.
-    document.addEventListener('DOMContentLoaded', () => {
-      const reportModal = document.getElementById('reportModal');
-      reportModal.addEventListener('show.bs.modal', (event) => {
-        const button = event.relatedTarget;
-        const report = JSON.parse(button.getAttribute('data-report'));
-        
-        document.getElementById('modalSubject').textContent = report.reportSubject;
-        document.getElementById('modalCraftsmanName').textContent = report.craftsmanName;
-        document.getElementById('modalEmployerId').textContent = report.employerId;
-        document.getElementById('modalDate').textContent = new Date(report.timestamp).toLocaleDateString();
-        document.getElementById('modalMessage').textContent = report.reportMessage;
+    let currentReportId = null;
+    
+    function showReportDetails(id, subject, message, craftsman, employer, date) {
+      currentReportId = id;
+      document.getElementById('modalSubject').textContent = subject;
+      document.getElementById('modalMessage').textContent = message;
+      document.getElementById('modalCraftsman').textContent = craftsman;
+      document.getElementById('modalEmployer').textContent = employer;
+      document.getElementById('modalDate').textContent = date;
+      
+      // Show/hide mark as seen button based on current status
+      const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
+      const isUnseen = row && row.classList.contains('table-warning');
+      const markSeenBtn = document.getElementById('modalMarkSeenBtn');
+      if (isUnseen) {
+        markSeenBtn.style.display = 'inline-block';
+      } else {
+        markSeenBtn.style.display = 'none';
+      }
+    }
+    
+    function markAsSeen(id) {
+      fetch(`/admin/reports/${id}/seen`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Update the row appearance
+          const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
+          if (row) {
+            row.classList.remove('table-warning');
+            // Update status badge
+            const statusCell = row.cells[0];
+            statusCell.innerHTML = '<span class="badge bg-success"><i class="bi bi-eye me-1"></i>Seen</span>';
+            // Remove mark seen button
+            const markSeenBtn = row.querySelector('button.btn-success');
+            if (markSeenBtn) markSeenBtn.remove();
+          }
+          
+          // Update badge count
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking report as seen');
       });
-    });
+    }
+    
+    function markAsSeenFromModal() {
+      if (currentReportId) {
+        markAsSeen(currentReportId);
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+        modal.hide();
+      }
+    }
+
+
+
+
+//- extends ../layout
+
+//- block append head
+//-   link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
+
+//- block content
+//-   .container
+//-     .dashboard-header
+//-       h1.dashboard-title Customer Reports
+//-       p.dashboard-subtitle View and manage reports submitted by employers.
+
+//-     .dashboard-section
+//-       if reports && reports.length > 0
+//-         table.table.table-striped
+//-           thead
+//-             tr
+//-               th Report Subject
+//-               th Craftsman Reported
+//-               th Submitted By
+//-               th Employer Phone
+//-               th Date
+//-               th Actions
+//-           tbody
+//-             each report in reports
+//-               tr
+//-                 // Report Subject
+//-                 td= report.reportSubject
+
+//-                 // Craftsman Name (link)
+//-                 td
+//-                   if report.craftsmanId && report.craftsmanId._id
+//-                     a(href=`/admin/craftsman/${report.craftsmanId._id}`) #{report.craftsmanId.name}
+//-                   else if report.craftsmanName
+//-                     = report.craftsmanName
+//-                   else
+//-                     span Unknown Craftsman
+
+//-                 // Employer Name
+//-                 td
+//-                   if report.employerId && report.employerId.name
+//-                     = report.employerId.name
+//-                   else
+//-                     span Unknown Employer
+
+//-                 // Employer Phone
+//-                 td
+//-                   if report.employerId && report.employerId.mobile
+//-                     = report.employerId.mobile
+//-                   else
+//-                     span N/A
+
+//-                 // Date
+//-                 td= new Date(report.timestamp).toLocaleDateString()
+
+//-                 // Actions: View Details Modal
+//-                 td
+//-                   button.btn.btn-sm.btn-info(
+//-                     data-bs-toggle="modal",
+//-                     data-bs-target="#reportModal",
+//-                     data-report=JSON.stringify(report)
+//-                   ) View Details
+//-       else
+//-         .empty-state
+//-           .empty-icon
+//-             i.fas.fa-inbox
+//-           h3 No New Reports
+//-           p You're all caught up! There are no new reports from employers.
+
+//-     // Modal for viewing full report
+//-     #reportModal.modal.fade(tabindex="-1", aria-labelledby="reportModalLabel", aria-hidden="true")
+//-       .modal-dialog
+//-         .modal-content
+//-           .modal-header
+//-             h5#reportModalLabel.modal-title Report Details
+//-             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
+//-           .modal-body
+//-             p
+//-               strong Subject: 
+//-               span#modalSubject
+//-             p
+//-               strong Craftsman Name: 
+//-               span#modalCraftsmanName
+//-             p
+//-               strong Submitted by Employer: 
+//-               span#modalEmployerName
+//-             p
+//-               strong Employer Phone: 
+//-               span#modalEmployerPhone
+//-             p
+//-               strong Date Submitted: 
+//-               span#modalDate
+//-             hr
+//-             h6 Report Message:
+//-             p#modalMessage
+//-           .modal-footer
+//-             button.btn.btn-secondary(type="button", data-bs-dismiss="modal") Close
+
+//- block append scripts
+//-   script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js")
+//-   script.
+//-     document.addEventListener('DOMContentLoaded', () => {
+//-       const reportModal = document.getElementById('reportModal');
+//-       reportModal.addEventListener('show.bs.modal', (event) => {
+//-         const button = event.relatedTarget;
+//-         const report = JSON.parse(button.getAttribute('data-report'));
+
+//-         document.getElementById('modalSubject').textContent = report.reportSubject;
+//-         document.getElementById('modalCraftsmanName').textContent = 
+//-           (report.craftsmanId && report.craftsmanId.name) || report.craftsmanName || 'Unknown';
+//-         document.getElementById('modalEmployerName').textContent = 
+//-           (report.employerId && report.employerId.name) || 'Unknown';
+//-         document.getElementById('modalEmployerPhone').textContent = 
+//-           (report.employerId && report.employerId.mobile) || 'N/A';
+//-         document.getElementById('modalDate').textContent = new Date(report.timestamp).toLocaleDateString();
+//-         document.getElementById('modalMessage').textContent = report.reportMessage;
+//-       });
+//-     });

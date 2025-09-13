@@ -1,0 +1,64 @@
+extends layout
+
+block head
+  title Payment Confirmation - CraftSmart
+
+block content
+  main.main
+    .container
+      h1.text-success ✅ Craftsman Paid Successfully
+      p The payment has been successfully processed. Details are below:
+
+      .transaction-details
+        dl
+          dt Transaction ID
+          dd #{transaction.transactionId}
+
+          dt Job ID
+          dd #{transaction.job}
+
+          dt User ID
+          dd #{transaction.user}
+
+          dt Status
+          dd #{transaction.status}
+
+          dt Total Amount
+          dd UGX #{transaction.total_amount}
+
+          dt Platform Fee
+          dd UGX #{transaction.commission_amount}
+
+          dt Craftsman Share
+          dd UGX #{transaction.disbursement_amount}
+
+          dt Employer Phone
+          dd #{transaction.employer_phone}
+
+          dt Craftsman Phone
+          dd #{transaction.craftsman_phone}
+
+          dt Payment Method
+          dd #{transaction.payment_method}
+
+          dt Payment Reference
+          dd #{transaction.payment_reference || "N/A"}
+
+          dt Disbursement Reference
+          dd #{transaction.disbursement_reference}
+
+          dt Confirmed By
+          dd #{transaction.confirmed_by}
+
+          dt Created At
+          dd #{transaction.createdAt.toLocaleString()}
+
+          dt Paid At
+          dd #{transaction.paid_at ? transaction.paid_at.toLocaleString() : "N/A"}
+
+      a.btn(href="/") ← Back to Dashboard
+
+block scripts
+  //- Any page-specific JS can go here
+  script.
+    console.log('Transaction details page loaded.');

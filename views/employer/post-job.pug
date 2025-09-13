@@ -32,11 +32,13 @@ block content
         .form-group
           label(for="location") Location
           input.form-control(type="text", id="location", name="location", required, placeholder="City, State")
+          // Hidden fields for coordinates
+          input(type="hidden", id="latitude", name="latitude")
+          input(type="hidden", id="longitude", name="longitude")
         
         .form-group
           label(for="budget") Budget (UGX)
           input.form-control(type="number", id="budget", name="budget", required, min="0", step="0.01", placeholder="e.g., 500000")
-          // Fee notification
           .fee-notification#fee-notification(style="display: none;")
 
         .form-group
@@ -107,7 +109,6 @@ block scripts
           return;
         }
 
-        // Calculate fee: 10% or minimum UGX 1,000, whichever is greater.
         const feeAmount = Math.max(budget * feePercentage, minFee);
         const craftsmanReceives = budget - feeAmount;
 

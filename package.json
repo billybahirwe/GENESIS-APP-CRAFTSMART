@@ -8,6 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@turf/turf": "^7.2.0",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.2.0",
@@ -23,6 +24,7 @@
     "mongoose": "^8.17.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "node-geocoder": "^4.4.1",
     "passport": "^0.7.0",
     "pg": "^8.16.3",
     "pug": "^3.0.3",

@@ -1,0 +1,33 @@
+extends ../layout
+
+block content
+  .row.justify-content-center
+    .col-md-6.col-lg-4
+      .card.shadow-lg
+        .card-header.bg-primary.text-white.text-center
+          h2.mb-0
+            i.bi.bi-shield-lock.me-2
+            | Admin Login
+        .card-body.p-4
+          if error
+            .alert.alert-danger.alert-dismissible.fade.show
+              | #{error}
+              button.btn-close(type="button" data-bs-dismiss="alert")
+          
+          form(action="/admin/login" method="POST")
+            .mb-4
+              label.form-label(for="password") Admin Password
+              input#password.form-control.form-control-lg(
+                type="password" 
+                name="password" 
+                placeholder="Enter admin password" 
+                required
+                autocomplete="current-password"
+              )
+            
+            button.btn.btn-primary.btn-lg.w-100(type="submit") 
+              i.bi.bi-key.me-2
+              | Login to Dashboard
+          
+          .text-center.mt-3
+            small.text-muted Secure admin access only

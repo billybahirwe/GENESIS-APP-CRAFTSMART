@@ -1,5 +1,4 @@
-// D:\GENESIS\GENESIS-APP-CRAFTSMART\project\models\job.js
-
+// models/Job.js
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
@@ -12,10 +11,26 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  // 🌍 GeoJSON location for distance calculations
   location: {
+    type: {
+      type: String,
+      enum: ["Point"],
+      default: "Point"
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true
+    }
+  },
+
+  // 🏷️ Human-readable address for display
+  locationName: {
     type: String,
     required: true
   },
+
   budget: {
     type: Number,
     required: true
@@ -61,6 +76,8 @@ const jobSchema = new mongoose.Schema({
   }
 });
 
-const Job = mongoose.model('Job', jobSchema);
+// Add a geospatial index for queries like "find nearby jobs"
+jobSchema.index({ location: "2dsphere" });
 
+const Job = mongoose.model('Job', jobSchema);
 module.exports = Job;

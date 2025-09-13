@@ -1,79 +1,95 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const transactionSchema = new mongoose.Schema({
-  // Type of transaction (deposit, disbursement, or system fee)
-  type: {
-    type: String,
-    enum: ['deposit', 'disbursement', 'fee'],
-    required: true
+const transactionSchema = new mongoose.Schema(
+  {
+    // Type of transaction
+    type: {
+      type: String,
+      enum: ["deposit", "disbursement", "fee", "admin_withdrawal"],
+      required: true,
+    },
+
+    // Job related to this transaction
+    job: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Job",
+    },
+
+    // User involved (employer for deposits, craftsman for disbursement, admin for withdrawal)
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    // Payment gateway references
+    transactionId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: undefined,
+    },
+    gatewayRef: {
+      type: String,
+      unique: true,
+      sparse: true,
+      required: true, // ✅ always required
+    },
+
+    // Status
+    status: {
+      type: String,
+      enum: [
+        "PENDING",
+        "COMPLETED",
+        "FAILED",
+        "DISBURSEMENT_INITIATED",
+        "DISBURSEMENT_COMPLETED",
+        "PAID_TO_CRAFTSMAN",
+      ],
+      default: "PENDING",
+    },
+
+    // Amounts
+    total_amount: { type: Number }, // total paid by employer / withdrawn by admin
+    commission_amount: { type: Number }, // 10% platform fee
+    disbursement_amount: { type: Number }, // 90% craftsman share
+
+    // Phone numbers
+    employer_phone: { type: String },
+    craftsman_phone: { type: String },
+
+    // Payment method & references
+    payment_method: { type: String },
+    payment_reference: { type: String }, // Flutterwave payment reference
+    disbursement_reference: { type: String }, // Flutterwave transfer reference
+    external_transaction_id: { type: String },
+    webhook_received_at: { type: Date },
+
+    // Who confirmed payout
+    confirmed_by: { type: String, enum: ["employer", "admin"] },
+
+    // Link to parent transaction (e.g., disbursement -> deposit)
+    relatedTransaction: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Transaction",
+    },
+
+    // Time when money was actually paid out
+    paid_at: { type: Date },
   },
+  { timestamps: true }
+);
 
-  // The job this transaction is related to
-  job: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Job', 
-    required: true 
-  },
-
-  // The user involved in the transaction (usually employer)
-  user: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User' 
-  },
-
-  // Unique reference from the payment gateway (Flutterwave tx_ref)
-  transactionId: { 
-    type: String, 
-    unique: true,
-    sparse: true,
-    default: undefined // ✅ important change
-  },
-
-  // Gateway’s guaranteed unique reference (flw_ref or transaction id)
-  gatewayRef: { 
-    type: String, 
-    unique: true,
-    sparse: true,
-    required: true
-  },
-
-  // Status of the transaction
-  status: {
-    type: String,
-    enum: [
-      'PENDING',
-      'COMPLETED',
-      'FAILED',
-      'DISBURSEMENT_INITIATED',
-      'DISBURSEMENT_COMPLETED'
-    ],
-    default: 'PENDING'
-  },
-
-  // Amounts
-  total_amount: { type: Number },
-  commission_amount: { type: Number },
-  disbursement_amount: { type: Number },
-
-  // Phone numbers involved
-  employer_phone: { type: String },
-  craftsman_phone: { type: String },
-
-  // Payment and disbursement references
-  payment_method: { type: String },
-  payment_reference: { type: String },
-  disbursement_reference: { type: String },
-  external_transaction_id: { type: String },
-  webhook_received_at: { type: Date },
-
-  // A link to a related transaction (e.g., disbursement references parent deposit)
-  relatedTransaction: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transaction'
+// Pre-save middleware: always ensure gatewayRef is set
+transactionSchema.pre("validate", function (next) {
+  if (!this.gatewayRef) {
+    this.gatewayRef = `tx_${this.type}_${Date.now()}_${Math.floor(
+      Math.random() * 10000
+    )}`;
   }
-
-}, { timestamps: true });
+  next();
+});
 
 // Export the model
-const Transaction = mongoose.model('Transaction', transactionSchema);
+const Transaction = mongoose.model("Transaction", transactionSchema);
 module.exports = Transaction;

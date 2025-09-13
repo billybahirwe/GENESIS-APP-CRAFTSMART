@@ -5,7 +5,8 @@ block content
     .dashboard-header
       h1.dashboard-title Welcome back, #{user.name}
       p.dashboard-subtitle Manage your projects and find skilled craftsmen
-    
+
+    // --- Stats Section ---
     .dashboard-stats
       .stat-card
         .stat-icon 📋
@@ -22,14 +23,15 @@ block content
         .stat-info
           .stat-number UGX #{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString('en-UG', { useGrouping: true })}
           .stat-label Total Budget
-    
+
+    // --- Main Actions ---
     .dashboard-actions
       a.btn.btn-primary(href="/employer/post-job") Post New Job
       a.btn.btn-secondary(href="/employer/browse-craftsmen") Browse Craftsmen
-      a.btn.btn-secondary(href="/employer/all-jobs") View All Job Postings
+      a.btn.btn-secondary(href="/employer/all-jobs") View Other Job Postings
       a.btn.btn-secondary(href="/employer/payment-records") View Payment Records
 
-    //- New Section for Reporting
+    // --- Reporting Section ---
     .dashboard-section.report-section
       h2 Report a Problem
       p If a craftsman did not perform well, you can report the issue directly to the administration.
@@ -44,7 +46,8 @@ block content
           label(for="reportMessage") Report Message
           textarea.form-control(id="reportMessage", name="reportMessage", rows="5", required)
         button.btn.btn-danger(type="submit") Submit Report
-    
+
+    // --- Recent Jobs Section ---
     .dashboard-section
       h2 Your Recent Jobs
       if jobs.length > 0
@@ -56,20 +59,35 @@ block content
               .job-meta
                 span.job-location 📍 #{job.location}
                 span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
-                span.job-status(class=`status-${job.status}`)= job.status
               .job-actions
                 if job.status === 'open'
                   a.btn.btn-sm.btn-secondary(href=`/employer/applications/${job._id}`) View Applications
                 else if job.status === 'in-progress'
                   a.btn.btn-sm.btn-primary(href=`/employer/deposit-funds/${job._id}`) Make Payment
                 else if job.status === 'paid-in-escrow'
-                  form(action=`/api/payment/release/${job._id}`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman? This action cannot be undone.');")
+                  form(action=`/job/${job._id}/confirm`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman?');")
+                    input(type="hidden" name="employerId" value=user._id)
                     button.btn.btn-sm.btn-success(type='submit') Release Funds
                 else if job.status === 'disbursed'
                   button.btn.btn-sm.btn-secondary(disabled) Funds Disbursed
+                else if job.status === 'completed'
+                  a.btn.btn-sm.btn-info(href=`/employer/payment-receipt/${job._id}`) View Receipt
       else
         .empty-state
           .empty-icon 📋
           h3 No Jobs Posted Yet
           p Start by posting your first job to connect with skilled craftsmen
           a.btn.btn-primary(href="/employer/post-job") Post Your First Job
+
+    // --- Payment Controls Section ---
+    .dashboard-section.payment-controls
+      h2 Payment Controls
+      each job in jobs
+        .payment-card
+          h4= job.title
+          if job.status === 'in-progress'
+            a.btn.btn-primary.btn-sm(href=`/employer/deposit-funds/${job._id}`) Make Payment
+          else if job.status === 'paid-in-escrow'
+            form(action=`/job/${job._id}/confirm`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman?');")
+              input(type="hidden" name="employerId" value=user._id)
+              button.btn.btn-success.btn-sm(type='submit') Release Funds

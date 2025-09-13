@@ -1,0 +1,33 @@
+extends ../layout
+
+block append head
+  link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
+
+block content
+  .container
+    .dashboard-header
+      h1.dashboard-title Admin Actions
+      p.dashboard-subtitle View all admin withdrawals and emergency confirmations
+
+    if adminActions && adminActions.length > 0
+      table.table.table-striped(style="margin-top:1rem;")
+        thead
+          tr
+            th Action Type
+            th Amount (UGX)
+            th Reference
+            th Date
+        tbody
+          each action in adminActions
+            tr
+              td= action.type ? action.type : 'N/A'
+              td UGX #{action.amount ? action.amount.toLocaleString('en-UG') : 0}
+              td= action.reference ? action.reference : 'N/A'
+              td= action.date ? action.date.toLocaleString() : 'N/A'
+    else
+      .empty-state(style="margin-top:1rem; text-align:center;")
+        i.fas.fa-check-circle(style="font-size:3rem; color:green;")
+        h3 No Admin Actions
+        p No emergency confirmations or withdrawals have been performed yet
+
+    a.btn.btn-secondary(href="/admin/dashboard") ← Back to Dashboard
