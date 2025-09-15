@@ -1,0 +1,55 @@
+extends ../layout
+
+block content
+  .container
+    h1.dashboard-title Payment Receipt
+
+    if transaction
+      .receipt-card
+        h2 Receipt
+        p.receipt-subtitle This is your official payment receipt.
+
+        .receipt-details
+          p
+            strong Transaction ID:
+            | #{transaction._id}
+          p
+            strong Job Title:
+            | #{transaction.job && transaction.job.title ? transaction.job.title : 'N/A'}
+          p
+            strong Paid By:
+            | #{transaction.user && transaction.user.name ? transaction.user.name : 'N/A'}
+          p
+            strong Transaction Type:
+            | #{transaction.type || 'N/A'}
+          p
+            strong Amount Paid:
+            | UGX #{transaction.total_amount ? transaction.total_amount.toLocaleString('en-UG', { useGrouping: true }) : 0}
+          p
+            strong Platform Commission (10%):
+            | UGX #{transaction.commission_amount ? transaction.commission_amount.toLocaleString('en-UG', { useGrouping: true }) : 0}
+          p
+            strong Craftsman Share (90%):
+            | UGX #{transaction.disbursement_amount ? transaction.disbursement_amount.toLocaleString('en-UG', { useGrouping: true }) : 0}
+          p
+            strong Payment Method:
+            | #{transaction.payment_method || 'N/A'}
+          p
+            strong Payment Reference:
+            | #{transaction.payment_reference || 'N/A'}
+          p
+            strong Status:
+            | #{transaction.status || 'N/A'}
+          p
+            strong Date:
+            | #{new Date(transaction.createdAt).toLocaleString()}
+
+        .receipt-actions
+          a.btn.btn-primary(href="/employer/dashboard") Back to Dashboard
+          a.btn.btn-secondary(href="/employer/payment-records") View All Payments
+    else
+      .empty-state
+        .empty-icon ❌
+        h2 Transaction Not Found
+        p The receipt you are trying to access does not exist or has been removed.
+        a.btn.btn-primary(href="/employer/dashboard") Back to Dashboard

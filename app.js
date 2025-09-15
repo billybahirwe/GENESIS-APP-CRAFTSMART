@@ -548,7 +548,6 @@ app.post(
 );
 
 
-
 app.get('/employer/browse-craftsmen', requireAuth, requireRole(['employer']), async (req, res) => {
   const craftsmen = await User.find({ role: 'craftsman', approved: true });
   res.render('employer/browse-craftsmen', { user: req.user, craftsmen, path: req.path });
@@ -1168,19 +1167,19 @@ app.get('/payment/status/:transactionId', async (req, res) => {
 });
 
 
-app.get("/employer/payment-receipt/:transactionId", async (req, res) => {
+app.get("/employer/payment-receipt/:jobId", async (req, res) => {
   try {
-    const { transactionId } = req.params;
-    const transaction = await Transaction.findById(transactionId).lean();
+    const { jobId } = req.params;
 
-    if (!transaction) {
-      return res.status(404).json({ success: false, message: "Transaction not found" });
-    }
+    const transaction = await Transaction.findOne({ job: jobId })
+      .populate("job")
+      .populate("user")
+      .lean();
 
-    return res.render("transaction-success", { transaction });
+    return res.render("employer/payment-receipt", { transaction, user: req.user });
   } catch (err) {
     console.error("❌ View receipt error:", err.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.render("employer/payment-receipt", { transaction: null, user: req.user });
   }
 });
 

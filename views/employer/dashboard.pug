@@ -78,16 +78,3 @@ block content
           h3 No Jobs Posted Yet
           p Start by posting your first job to connect with skilled craftsmen
           a.btn.btn-primary(href="/employer/post-job") Post Your First Job
-
-    // --- Payment Controls Section ---
-    .dashboard-section.payment-controls
-      h2 Payment Controls
-      each job in jobs
-        .payment-card
-          h4= job.title
-          if job.status === 'in-progress'
-            a.btn.btn-primary.btn-sm(href=`/employer/deposit-funds/${job._id}`) Make Payment
-          else if job.status === 'paid-in-escrow'
-            form(action=`/job/${job._id}/confirm`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman?');")
-              input(type="hidden" name="employerId" value=user._id)
-              button.btn.btn-success.btn-sm(type='submit') Release Funds
