@@ -15,9 +15,9 @@ html(lang="en")
         .header-content
           .logo
             a(href="/")
-              i.fas.fa-hammer(style="color:#374151;margin-right:6px;")
+              i.fa-solid.fa-hammer.nav-icon
               | CraftSmart
-          
+
           nav.nav(id="nav")
             .profile-section
               if user
@@ -27,80 +27,80 @@ html(lang="en")
                       img.profile-avatar(src=user.profilePicture, alt="Profile Picture")
                     else
                       .profile-initial-placeholder 
-                        i.fas.fa-user(style="color:#374151;")
+                        i.fa-solid.fa-user.nav-icon
                     .profile-details
                       span.profile-name #{user.name}
               else
                 .profile-info
                   .profile-initial-placeholder
-                    i.fas.fa-user(style="color:#374151;")
+                    i.fa-solid.fa-user.nav-icon
 
             ul.nav-list
               if user
                 li
                   a(href=`/${user.role}/dashboard`)
-                    i.fas.fa-gauge(style="color:#374151;")
+                    i.fa-solid.fa-tachometer-alt.nav-icon
                     span Dashboard
                 if user.role === 'employer'
                   li
                     a(href="/employer/post-job")
-                      i.fas.fa-briefcase(style="color:#374151;")
+                      i.fa-solid.fa-briefcase.nav-icon
                       span Post Job
                   li
                     a(href="/employer/browse-craftsmen")
-                      i.fas.fa-users-gear(style="color:#374151;")
+                      i.fa-solid.fa-users.nav-icon
                       span Browse Craftsmen
                 if user.role === 'admin'
                   li
                     a(href="/admin/blacklist")
-                      i.fas.fa-user-shield(style="color:#374151;")
+                      i.fa-solid.fa-user-shield.nav-icon
                       span Admin Blacklist
                 if user.role === 'craftsman'
                   li.mobile-only
                     a(href="/craftsman/profile")
-                      i.fas.fa-id-card(style="color:#374151;")
+                      i.fa-solid.fa-id-card.nav-icon
                       span My Profile
                 li
                   a(href="/public-blacklist")
-                    i.fas.fa-ban(style="color:#374151;")
+                    i.fa-solid.fa-ban.nav-icon
                     span Public Blacklist
                 li.mobile-only
                   a(href="/logout")
-                    i.fas.fa-right-from-bracket(style="color:#374151;")
+                    i.fa-solid.fa-sign-out-alt.nav-icon
                     span Logout
               else
                 li
                   a(href="/login")
-                    i.fas.fa-right-to-bracket(style="color:#374151;")
+                    i.fa-solid.fa-sign-in-alt.nav-icon
                     span Login
                 li
                   a(href="/register")
-                    i.fas.fa-user-plus(style="color:#374151;")
+                    i.fa-solid.fa-user-plus.nav-icon
                     span Register
                 li
                   a(href="/contact")
-                    i.fas.fa-envelope(style="color:#374151;")
+                    i.fa-solid.fa-envelope.nav-icon
                     span Contact Us
 
           .header-icons
             if user
               a.nav-icon.notification-link(href="#")
-                i.fas.fa-bell(style="color:#374151;")
+                i.fa-solid.fa-bell.nav-icon
                 span#notification-badge.notification-badge 0
               a.nav-icon.messages-link(href="/messages")
-                i.fas.fa-envelope(style="color:#374151;")
+                i.fa-solid.fa-envelope.nav-icon
               .profile-dropdown
                 a.nav-icon.profile-icon(href="#", onclick="toggleDropdown(event)")
-                  i.fas.fa-user-circle(style="color:#374151;")
+                  i.fa-solid.fa-user-circle.nav-icon
                 .profile-dropdown-content#profileDropdown
                   a(href=`/${user.role}/profile`)
-                    i.fas.fa-user.mr-2(style="color:#374151;")
+                    i.fa-solid.fa-user.mr-2.nav-icon
                     | My Profile
                   a(href="/contact")
-                    i.fas.fa-envelope.mr-2(style="color:#374151;")
+                    i.fa-solid.fa-envelope.mr-2.nav-icon
                     | Contact Us
                   a(href="/logout")
-                    i.fas.fa-right-from-bracket.mr-2(style="color:#374151;")
+                    i.fa-solid.fa-sign-out-alt.mr-2.nav-icon
                     | Logout
 
           .mobile-menu-toggle(onclick="toggleMobileMenu()")
@@ -119,19 +119,17 @@ html(lang="en")
     script(src="/socket.io/socket.io.js")
     script(src="/js/scripts.js")
 
-    // ⚡ Block for child template scripts
     block scripts
 
-    // Inline layout JS
     script.
-      console.log("✅ layout.pug JS loaded"); // debug to verify scripts load
+      console.log("✅ layout.pug JS loaded");
 
       function toggleDropdown(event) {
         event.stopPropagation();
         const dropdown = document.getElementById("profileDropdown");
         if (dropdown) dropdown.classList.toggle("show");
       }
-      
+
       window.onclick = function(event) {
         if (!event.target.matches('.profile-icon i')) {
           var dropdowns = document.getElementsByClassName("profile-dropdown-content");
@@ -146,5 +144,8 @@ html(lang="en")
 
       function toggleMobileMenu() {
         const nav = document.getElementById('nav');
+        const toggle = document.querySelector('.mobile-menu-toggle');
         if (nav) nav.classList.toggle('nav-active');
+        if (toggle) toggle.classList.toggle('open');
       }
+
