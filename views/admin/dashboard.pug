@@ -2,6 +2,8 @@ extends ../layout
 
 block append head
   link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css')
+  style.
+    a { text-decoration: none; color: inherit; }
 
 block content
   .container
@@ -11,35 +13,42 @@ block content
 
     // --- Stats Section ---
     .dashboard-stats(style="display:flex; flex-wrap:wrap; gap:1rem;")
-      .stat-card(style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
+      // Total Users Card
+      a.stat-card(href="#usersSection", style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
         .stat-icon
           i.fas.fa-users
         .stat-info
-          .stat-number= totalUsers
+          .stat-number= Array.isArray(totalUsers) ? totalUsers.length : totalUsers || 0
           .stat-label Total Users
-      .stat-card(style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
+
+      // Total Jobs Card
+      a.stat-card(href="#jobsSection", style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
         .stat-icon
           i.fas.fa-clipboard-list
         .stat-info
-          .stat-number= totalJobs
+          .stat-number= Array.isArray(totalJobs) ? totalJobs.length : totalJobs || 0
           .stat-label Total Jobs
-      .stat-card(style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
+
+      // Pending Payments Card
+      a.stat-card(href="#paymentSection", style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
         .stat-icon
-          i.fas.fa-star
+          i.fas.fa-money-check-alt
         .stat-info
-          .stat-number= totalReviews
-          .stat-label Reviews
-      .stat-card(style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
+          .stat-number= Array.isArray(pendingPayments) ? pendingPayments.length : 0
+          .stat-label Pending Payments
+
+      // Pending Craftsmen Approvals Card
+      a.stat-card(href="#craftsmenSection", style="flex:1 1 200px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
         .stat-icon
           i.fas.fa-hourglass-half
         .stat-info
-          .stat-number= pendingCraftsmen.length
+          .stat-number= Array.isArray(pendingCraftsmen) ? pendingCraftsmen.length : 0
           .stat-label Pending Approvals
 
-    // --- Pending Craftsman Approvals ---
-    .admin-section
+    // --- Pending Craftsman Approvals Section ---
+    .admin-section(id="craftsmenSection")
       h2 Pending Craftsman Approvals
-      if pendingCraftsmen.length > 0
+      if pendingCraftsmen && pendingCraftsmen.length > 0
         .approval-list(style="display:flex; flex-wrap:wrap; gap:1rem;")
           each craftsman in pendingCraftsmen
             .approval-card(style="flex:1 1 300px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
@@ -64,7 +73,7 @@ block content
           p All craftsman profiles are up to date
 
     // --- Platform Management Section ---
-    .admin-section
+    .admin-section(id="platformSection")
       h2 Platform Management
       .management-actions(style="display:flex; flex-wrap:wrap; gap:1rem;")
         a.btn.btn-secondary(href="/admin/craftsmen") View All Craftsmen
@@ -75,12 +84,11 @@ block content
         a.btn.btn-secondary(href="/admin/dashboard-payment") Manage Payments
 
     // --- Payment Controls Section ---
-    .admin-section
+    .admin-section(id="paymentSection")
       h2 Payment Controls
       p Quickly manage escrow payments, withdraw fees, and emergency confirmations
 
       .payment-cards(style="display:flex; flex-wrap:wrap; gap:1rem;")
-        
         // Platform Summary Buttons
         .payment-card(style="flex:1 1 300px; padding:1rem; border:1px solid #ddd; border-radius:8px;")
           h4 Platform Summary
@@ -103,7 +111,7 @@ block content
             button.btn.btn-primary.btn-block(type="submit") Withdraw Fees
 
     // --- Jobs in Escrow Section ---
-    .admin-section
+    .admin-section(id="jobsSection")
       h2 Jobs in Escrow
       if escrowJobs && escrowJobs.length > 0
         table.table.table-striped

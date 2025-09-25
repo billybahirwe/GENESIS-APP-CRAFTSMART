@@ -1,31 +1,26 @@
 // controllers/employerController.js
+const Job = require('../models/job');
+const User = require('../models/user');
 
-// You might need to import your models (like User, Job, etc.) here
-// const Job = require('../models/job');
-
-// This function will render the employer dashboard
 exports.renderDashboard = async (req, res) => {
-    try {
-        // You would typically fetch data for the dashboard here
-        // For example, fetching the user's jobs:
-        // const userJobs = await Job.find({ userId: req.user._id });
+  try {
+    // Employer’s jobs
+    const jobs = await Job.find({ employerId: req.user._id })
+      .populate('craftsmanId', 'name')  // show assigned craftsman
+      .lean();
 
-        // Placeholder data for now
-        const jobs = [];
-        const craftsmen = [];
+    // All craftsmen (for dropdown in report form)
+    const craftsmen = await User.find({ role: 'craftsman', approved: true })
+      .select('name _id')
+      .lean();
 
-        // Render the dashboard Pug template and pass the data to it
-        res.render('employer/dashboard', {
-            // Assume the user object is available from the authentication middleware
-            user: req.user,
-            jobs: jobs,
-            craftsmen: craftsmen
-        });
-    } catch (error) {
-        console.error('Error rendering dashboard:', error);
-        res.status(500).send('Internal Server Error');
-    }
+    res.render('employer/dashboard', {
+      user: req.user,
+      jobs,
+      craftsmen
+    });
+  } catch (error) {
+    console.error('Error rendering employer dashboard:', error);
+    res.status(500).send('Internal Server Error');
+  }
 };
-
-// You can add other functions here if needed
-// exports.someOtherFunction = (req, res) => { ... };

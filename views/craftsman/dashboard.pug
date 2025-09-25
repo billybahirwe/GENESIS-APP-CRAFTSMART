@@ -12,24 +12,24 @@ block content
         p.dashboard-subtitle Find your next project and grow your business
 
     .dashboard-stats
-      .stat-card
+      a.stat-card(href="#available-jobs")
         .stat-icon 📋
         .stat-info
           .stat-number= availableJobs.length
           .stat-label Available Jobs
-      .stat-card
+      a.stat-card(href="#my-jobs")
         .stat-icon 🔨
         .stat-info
           .stat-number= myJobs.length
           .stat-label My Jobs
-      .stat-card
+      a.stat-card(href="#rating")
         .stat-icon ⭐
         .stat-info
           .stat-number= user.rating || 'New'
           .stat-label Rating
 
     if user.approved
-      .dashboard-section
+      .dashboard-section#available-jobs
         h2 Available Jobs
         if availableJobs.length > 0
           .jobs-grid
@@ -39,10 +39,8 @@ block content
                 p.job-description= job.description
                 .job-meta
                   span.job-location 📍 #{job.locationName}
-                  // Display distance if available
                   if job.distanceKm
                     span.job-distance 🛣️ #{job.distanceKm.toFixed(1)} km away
-                    // Far job warning using only CSS class
                     if job.isFar
                       span.job-warning
                         i.fas.fa-exclamation-triangle
@@ -60,7 +58,7 @@ block content
             p Check back later for new opportunities
 
     if myJobs.length > 0
-      .dashboard-section
+      .dashboard-section#my-jobs
         h2 My Active Jobs
         .jobs-grid
           each job in myJobs
@@ -77,3 +75,47 @@ block content
                   p.payment-status.status-warning Employer has paid. Funds pending release.
                 else if job.status === 'COMPLETED'
                   p.payment-status.status-success Funds received!
+
+    // --- Report Employer Section ---
+    if myJobs.length > 0
+      .dashboard-section.report-section
+        h2 Report an Employer
+        p If your employer did not respect the agreement, report the issue directly to the administration.
+
+        form(action="/craftsman/report-problem", method="POST")
+          .form-group
+            label(for="jobId") Select Job
+            select.form-control(name="jobId", id="jobId", required)
+              option(value="" disabled selected) -- Select Job --
+              each job in myJobs
+                if job.employerId
+                  option(
+                    value=job._id
+                    data-employer=job.employerId._id
+                  )= job.title + " (ID: " + job._id + ")"
+                else
+                  option(value=job._id)= job.title + " (ID: " + job._id + ")"
+
+          .form-group
+            label(for="employerId") Employer
+            select.form-control(name="employerId", id="employerId", required)
+              option(value="" disabled selected) -- Select Employer --
+              each job in myJobs
+                if job.employerId
+                  option(value=job.employerId._id)= job.employerId.name + " (" + job.employerId.mobile + ")"
+
+          .form-group
+            label(for="reportSubject") Subject
+            input.form-control(type="text", id="reportSubject", name="reportSubject", placeholder="Enter report subject", required)
+
+          .form-group
+            label(for="reportMessage") Report Message
+            textarea.form-control(id="reportMessage", name="reportMessage", rows="5", placeholder="Describe the issue in detail" required)
+
+          button.btn.btn-danger(type="submit") Submit Report
+
+    // Optional Rating Section
+    .dashboard-section#rating
+      h2 Your Rating
+      p Your current rating is 
+        strong= user.rating || 'New'

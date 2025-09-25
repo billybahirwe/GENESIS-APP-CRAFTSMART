@@ -2,79 +2,265 @@ extends ../layout
 
 block content
   .container
+    // --- Dashboard Header ---
     .dashboard-header
       h1.dashboard-title Welcome back, #{user.name}
       p.dashboard-subtitle Manage your projects and find skilled craftsmen
 
     // --- Stats Section ---
     .dashboard-stats
-      .stat-card
+      a.stat-card(href="#recent-jobs")
         .stat-icon 📋
         .stat-info
           .stat-number= jobs.length
           .stat-label Active Jobs
-      .stat-card
+
+      a.stat-card(href="/employer/browse-craftsmen")
         .stat-icon 👨‍🔧
         .stat-info
           .stat-number= craftsmen.length
           .stat-label Available Craftsmen
-      .stat-card
+
+      a.stat-card(href="/employer/payment-records")
         .stat-icon 💰
         .stat-info
           .stat-number UGX #{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString('en-UG', { useGrouping: true })}
           .stat-label Total Budget
 
-    // --- Main Actions ---
+    // --- Actions ---
     .dashboard-actions
       a.btn.btn-primary(href="/employer/post-job") Post New Job
       a.btn.btn-secondary(href="/employer/browse-craftsmen") Browse Craftsmen
       a.btn.btn-secondary(href="/employer/all-jobs") View Other Job Postings
       a.btn.btn-secondary(href="/employer/payment-records") View Payment Records
 
-    // --- Reporting Section ---
+    // --- Report a Problem Form ---
     .dashboard-section.report-section
       h2 Report a Problem
       p If a craftsman did not perform well, you can report the issue directly to the administration.
       form(action="/employer/report-problem", method="POST")
         .form-group
-          label(for="craftsmanName") Craftsman Name
-          input.form-control(type="text", id="craftsmanName", name="craftsmanName", required)
+          label(for="jobId") Select Job
+          select.form-control(name="jobId", id="jobId", required)
+            option(value="" disabled selected) -- Select Job --
+            each job in jobs
+              option(value=job._id)= job.title
+
+        .form-group
+          label(for="craftsmanId") Select Craftsman
+          select.form-control(name="craftsmanId", id="craftsmanId", required)
+            option(value="" disabled selected) -- Select Craftsman --
+            each craftsman in craftsmen
+              option(value=craftsman._id)= craftsman.name
+
         .form-group
           label(for="reportSubject") Subject
-          input.form-control(type="text", id="reportSubject", name="reportSubject", required)
+          input.form-control(type="text", id="reportSubject", name="reportSubject", placeholder="Enter report subject", required)
+
         .form-group
           label(for="reportMessage") Report Message
-          textarea.form-control(id="reportMessage", name="reportMessage", rows="5", required)
+          textarea.form-control(id="reportMessage", name="reportMessage", rows="5", placeholder="Describe the issue in detail" required)
+
         button.btn.btn-danger(type="submit") Submit Report
 
     // --- Recent Jobs Section ---
-    .dashboard-section
+    .dashboard-section#recent-jobs
       h2 Your Recent Jobs
       if jobs.length > 0
         .jobs-grid
           each job in jobs
             .job-card
-              h3.job-title= job.title
-              p.job-description= job.description
-              .job-meta
-                span.job-location 📍 #{job.location}
-                span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
-              .job-actions
+              .job-header
+                h3.job-title= job.title
                 if job.status === 'open'
                   a.btn.btn-sm.btn-secondary(href=`/employer/applications/${job._id}`) View Applications
                 else if job.status === 'in-progress'
                   a.btn.btn-sm.btn-primary(href=`/employer/deposit-funds/${job._id}`) Make Payment
                 else if job.status === 'paid-in-escrow'
-                  form(action=`/job/${job._id}/confirm`, method='POST', onsubmit="return confirm('Are you sure you want to release the funds to the craftsman?');")
+                  form.release-funds-form(action=`/job/${job._id}/confirm`, method='POST')
                     input(type="hidden" name="employerId" value=user._id)
-                    button.btn.btn-sm.btn-success(type='submit') Release Funds
+                    button.btn.btn-sm.btn-success.release-btn(type='button' data-job-id=job._id) Release Funds
                 else if job.status === 'disbursed'
                   button.btn.btn-sm.btn-secondary(disabled) Funds Disbursed
                 else if job.status === 'completed'
                   a.btn.btn-sm.btn-info(href=`/employer/payment-receipt/${job._id}`) View Receipt
+
+              p.job-description= job.description
+              .job-meta
+                span.job-location 📍 #{job.location}
+                span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
       else
         .empty-state
           .empty-icon 📋
           h3 No Jobs Posted Yet
           p Start by posting your first job to connect with skilled craftsmen
           a.btn.btn-primary(href="/employer/post-job") Post Your First Job
+
+block scripts
+  script.
+    document.addEventListener("DOMContentLoaded", function () {
+      // --- Release funds confirmation ---
+      document.querySelectorAll(".release-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+          if (!button.dataset.confirmed) {
+            alert("⚠️ You are about to send money to the craftsman. Are you sure the work was well done?\n\nClick 'Release Funds' again to confirm.");
+            button.dataset.confirmed = "true";
+          } else {
+            button.closest("form").submit();
+          }
+        });
+      });
+
+      // --- Smooth scrolling for stats cards ---
+      document.querySelectorAll('.dashboard-stats a').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          const targetId = this.getAttribute('href');
+          if (targetId.startsWith('#')) {
+            e.preventDefault();
+            document.querySelector(targetId).scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+    });
+
+
+
+//- extends ../layout
+
+//- block content
+//-   .container
+//-     .dashboard-header
+//-       h1.dashboard-title Welcome back, #{user.name}
+//-       p.dashboard-subtitle Manage your projects and find skilled craftsmen
+
+//-     // --- Stats Section (clickable boxes) ---
+//-     .dashboard-stats
+//-       a.stat-card(href="#recent-jobs")
+//-         .stat-icon 📋
+//-         .stat-info
+//-           .stat-number= jobs.length
+//-           .stat-label Active Jobs
+//-       a.stat-card(href="#browse-craftsmen")
+//-         .stat-icon 👨‍🔧
+//-         .stat-info
+//-           .stat-number= craftsmen.length
+//-           .stat-label Available Craftsmen
+//-       a.stat-card(href="#payment-records")
+//-         .stat-icon 💰
+//-         .stat-info
+//-           .stat-number UGX #{jobs.reduce((sum, job) => sum + job.budget, 0).toLocaleString('en-UG', { useGrouping: true })}
+//-           .stat-label Total Budget
+
+//-     // --- Main Actions ---
+//-     .dashboard-actions
+//-       a.btn.btn-primary(href="/employer/post-job") Post New Job
+//-       a.btn.btn-secondary#browse-craftsmen(href="/employer/browse-craftsmen") Browse Craftsmen
+//-       a.btn.btn-secondary(href="/employer/all-jobs") View Other Job Postings
+//-       a.btn.btn-secondary#payment-records(href="/employer/payment-records") View Payment Records
+
+//-     // --- Reporting Section ---
+//-     .dashboard-section.report-section
+//-       h2 Report a Problem
+//-       p If a craftsman did not perform well, you can report the issue directly to the administration.
+//-       form(action="/employer/report-problem", method="POST")
+//-         .form-group
+//-           label(for="craftsmanName") Craftsman Name
+//-           input.form-control(type="text", id="craftsmanName", name="craftsmanName", required)
+//-         .form-group
+//-           label(for="reportSubject") Subject
+//-           input.form-control(type="text", id="reportSubject", name="reportSubject", required)
+//-         .form-group
+//-           label(for="reportMessage") Report Message
+//-           textarea.form-control(id="reportMessage", name="reportMessage", rows="5", required)
+//-         button.btn.btn-danger(type="submit") Submit Report
+
+//-     // --- Recent Jobs Section ---
+//-     .dashboard-section#recent-jobs
+//-       h2 Your Recent Jobs
+//-       if jobs.length > 0
+//-         .jobs-grid
+//-           each job in jobs
+//-             .job-card
+//-               // --- Title row with quick action ---
+//-               .job-header
+//-                 h3.job-title= job.title
+//-                 if job.status === 'open'
+//-                   a.btn.btn-sm.btn-secondary(href=`/employer/applications/${job._id}`) View Applications
+//-                 else if job.status === 'in-progress'
+//-                   a.btn.btn-sm.btn-primary(href=`/employer/deposit-funds/${job._id}`) Make Payment
+//-                 else if job.status === 'paid-in-escrow'
+//-                   form.release-funds-form(action=`/job/${job._id}/confirm`, method='POST')
+//-                     input(type="hidden" name="employerId" value=user._id)
+//-                     button.btn.btn-sm.btn-success.release-btn(type='button' data-job-id=job._id) Release Funds
+//-                 else if job.status === 'disbursed'
+//-                   button.btn.btn-sm.btn-secondary(disabled) Funds Disbursed
+//-                 else if job.status === 'completed'
+//-                   a.btn.btn-sm.btn-info(href=`/employer/payment-receipt/${job._id}`) View Receipt
+
+//-               // --- Description + meta info ---
+//-               p.job-description= job.description
+//-               .job-meta
+//-                 span.job-location 📍 #{job.location}
+//-                 span.job-budget 💰 UGX #{job.budget.toLocaleString('en-UG', { useGrouping: true })}
+
+//-       else
+//-         .empty-state
+//-           .empty-icon 📋
+//-           h3 No Jobs Posted Yet
+//-           p Start by posting your first job to connect with skilled craftsmen
+//-           a.btn.btn-primary(href="/employer/post-job") Post Your First Job
+
+//-   // --- Confirmation Panel Script ---
+//-   script.
+//-     document.addEventListener("DOMContentLoaded", function () {
+//-       document.querySelectorAll(".release-btn").forEach(function (button) {
+//-         button.addEventListener("click", function () {
+//-           if (!button.dataset.confirmed) {
+//-             alert("⚠️ You are about to send money to the craftsman. Are you sure the work was well done?\n\nClick 'Release Funds' again to confirm.");
+//-             button.dataset.confirmed = "true";
+//-           } else {
+//-             button.closest("form").submit();
+//-           }
+//-         });
+//-       });
+
+//-       document.querySelectorAll('.dashboard-stats a').forEach(function (link) {
+//-         link.addEventListener('click', function (e) {
+//-           const targetId = this.getAttribute('href');
+//-           if (targetId.startsWith('#')) {
+//-             e.preventDefault();
+//-             document.querySelector(targetId).scrollIntoView({ behavior: 'smooth' });
+//-           }
+//-         });
+//-       });
+//-     });
+
+//-   // --- Extra CSS to remove link underline & style cards ---
+//-   style.
+//-     .dashboard-stats a.stat-card {
+//-       text-decoration: none;
+//-       color: inherit;
+//-       display: block;
+//-     }
+//-     .dashboard-stats a.stat-card:hover,
+//-     .dashboard-stats a.stat-card:focus,
+//-     .dashboard-stats a.stat-card:visited {
+//-       text-decoration: none;
+//-       color: inherit;
+//-       opacity: 0.95;
+//-       cursor: pointer;
+//-     }
+
+//-     .stat-card {
+//-       background: #fff;
+//-       border-radius: 12px;
+//-       padding: 1.5rem;
+//-       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+//-       transition: transform 0.2s ease, box-shadow 0.2s ease;
+//-       margin-bottom: 1rem;
+//-     }
+
+//-     .stat-card:hover {
+//-       transform: translateY(-3px);
+//-       box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+//-     }

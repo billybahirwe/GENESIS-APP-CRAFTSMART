@@ -20,13 +20,13 @@ block content
             | Blacklisted Users (#{blacklist.length})
         .card-body.p-0
           if blacklist.length === 0
-            .text-center.py-5
+            .text-center.py-5#no-users
               i.bi.bi-shield-check.display-1.text-success
               h4.mt-3 No blacklisted users
               p.text-muted The blacklist is currently empty.
           else
             .table-responsive
-              table.table.table-striped.table-hover.mb-0
+              table.table.table-striped.table-hover.mb-0#blacklist-table
                 thead.table-dark
                   tr
                     th Name
@@ -46,7 +46,11 @@ block content
                       td
                         small.text-muted #{formatDate(user.addedAt)}
                       td
-                        button.btn.btn-danger.btn-sm(onclick=`removeFromBlacklist('${user._id}')`)
+                        button.btn.btn-danger.btn-sm(
+                          type="button"
+                          data-action="remove-blacklist"
+                          data-id=user._id
+                        )
                           i.bi.bi-trash.me-1
                           | Remove
 
@@ -54,7 +58,7 @@ block content
   .modal.fade#addBlacklistModal(tabindex="-1")
     .modal-dialog
       .modal-content
-        form(action="/admin/blacklist" method="POST")
+        form#addBlacklistForm
           .modal-header.bg-primary.text-white
             h5.modal-title
               i.bi.bi-shield-x.me-2
@@ -63,13 +67,13 @@ block content
           .modal-body
             .mb-3
               label.form-label(for="name") Full Name
-              input#name.form-control(type="text" name="name" required placeholder="Enter full name")
+              input#name.form-control(type="text" required placeholder="Enter full name")
             .mb-3
               label.form-label(for="mobile") Mobile Number
-              input#mobile.form-control(type="tel" name="mobile" required placeholder="Enter mobile number")
+              input#mobile.form-control(type="tel" required placeholder="Enter mobile number")
             .mb-3
               label.form-label(for="reason") Reason for Blacklisting
-              select#reason.form-select(name="reason" required)
+              select#reason.form-select(required)
                 option(value="") Select a reason...
                 option(value="Poor Performance") Poor Performance
                 option(value="Unprofessional Behavior") Unprofessional Behavior
@@ -83,41 +87,128 @@ block content
               i.bi.bi-shield-x.me-2
               | Add to Blacklist
 
+block scripts
   script.
-    function removeFromBlacklist(id) {
-      if (confirm('Are you sure you want to remove this user from the blacklist?')) {
-        fetch(`/admin/blacklist/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        .then(response => response.json())
-        .then(data => {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log("✅ blacklist.pug JS loaded");
+
+      // Remove user dynamically
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action="remove-blacklist"]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (!confirm("Are you sure you want to remove this user from the blacklist?")) return;
+
+        try {
+          const res = await fetch(`/admin/blacklist/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+          });
+          const data = await res.json();
           if (data.message) {
-            document.getElementById(`blacklist-${id}`).remove();
-            
-            // Show success message
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-              ${data.message}
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.row'));
-            
-            // Auto dismiss after 3 seconds
-            setTimeout(() => {
-              alertDiv.remove();
-            }, 3000);
+            const row = document.getElementById(`blacklist-${id}`);
+            if (row) row.remove();
+
+            // If no more rows, show "no users" message
+            const tbody = document.querySelector('#blacklist-table tbody');
+            if (!tbody || tbody.children.length === 0) {
+              document.getElementById('no-users').classList.remove('d-none');
+            }
+
+            alert(data.message);
           }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Error removing user from blacklist');
-        });
-      }
-    }
+        } catch (err) {
+          console.error(err);
+          alert("Error removing user from blacklist");
+        }
+      });
+
+      // Add user dynamically
+      const addForm = document.getElementById('addBlacklistForm');
+      addForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = {
+          name: document.getElementById('name').value.trim(),
+          mobile: document.getElementById('mobile').value.trim(),
+          reason: document.getElementById('reason').value
+        };
+
+        if (!formData.name || !formData.mobile || !formData.reason) {
+          alert("All fields are required");
+          return;
+        }
+
+        try {
+          const res = await fetch('/admin/blacklist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            // Remove "no users" message if it exists
+            const noUsersDiv = document.getElementById('no-users');
+            if (noUsersDiv) noUsersDiv.classList.add('d-none');
+
+            // If table doesn't exist yet, create it
+            let table = document.getElementById('blacklist-table');
+            if (!table) {
+              const cardBody = document.querySelector('.card-body');
+              table = document.createElement('table');
+              table.id = 'blacklist-table';
+              table.className = 'table table-striped table-hover mb-0';
+              table.innerHTML = `
+                <thead class="table-dark">
+                  <tr>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>Reason</th>
+                    <th>Added Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              `;
+              cardBody.innerHTML = '';
+              cardBody.appendChild(table);
+            }
+
+            const tbody = table.querySelector('tbody');
+            const tr = document.createElement('tr');
+            tr.id = `blacklist-${data.user._id}`;
+            tr.innerHTML = `
+              <td><strong>${data.user.name}</strong></td>
+              <td><code>${data.user.mobile}</code></td>
+              <td><span class="badge bg-warning text-dark">${data.user.reason}</span></td>
+              <td><small class="text-muted">${new Date(data.user.addedAt).toLocaleString()}</small></td>
+              <td>
+                <button class="btn btn-danger btn-sm" type="button" data-action="remove-blacklist" data-id="${data.user._id}">
+                  <i class="bi bi-trash me-1"></i> Remove
+                </button>
+              </td>
+            `;
+            tbody.prepend(tr);
+
+            addForm.reset();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addBlacklistModal'));
+            modal.hide();
+            alert("✅ User added to blacklist successfully");
+          } else {
+            alert(data.message || "Failed to add user");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("⚠️ Network or server error adding user.");
+        }
+      });
+    });
+
+
+
+
 
 
 

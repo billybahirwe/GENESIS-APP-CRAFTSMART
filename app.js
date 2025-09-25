@@ -36,6 +36,8 @@ const PaymentLog = require('./models/PaymentLog');
 const Blacklist = require('./models/blacklist');
 const Message = require('./models/message');
 const Application = require('./models/application');
+const Report = require('./models/report');
+
 
 // --- Route and Middleware Imports ---
 const paymentRoutes = require('./routes/flutterwave-payment');
@@ -91,6 +93,15 @@ app.use(cors({
     : ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true
 }));
+
+
+// Only declare this once, **before using it**
+const multerFields = upload.fields([
+  { name: 'profilePicture', maxCount: 1 },
+  { name: 'cv', maxCount: 1 },
+  { name: 'coverLetter', maxCount: 1 }
+]);
+
 
 // const upload = multer({ storage });
 const uploadTemp = multer({ dest: 'uploads/' });
@@ -259,18 +270,21 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// --- GET Register Page ---
 app.get('/register', (req, res) => {
   const formData = req.session.formData || {};
   delete req.session.formData;
   res.render('register', { path: req.path, formData });
 });
 
+// --- POST Register ---
 app.post('/register', async (req, res) => {
   const { 
     name, email, mobile, password, confirmPassword, role,
     region, district, city,
     company, position, industry,
-    skills, bio
+    skills, bio,
+    mtnMoney, airtelMoney // ✅ capture these from form
   } = req.body;
 
   try {
@@ -319,14 +333,14 @@ app.post('/register', async (req, res) => {
       locationName = fullLocation; // fallback
     }
 
-    // ✅ Create user
+    // ✅ Create user object
     const newUser = new User({
       name,
       email,
       mobile,
       password: hashedPassword,
       role,
-      location: { region, district, city }, // keep structured fields
+      location: { region, district, city }, // structured fields
       geoLocation,   // ✅ for distance calculations
       locationName,  // ✅ human-readable display
     });
@@ -340,6 +354,8 @@ app.post('/register', async (req, res) => {
       newUser.skills = skills ? skills.split(',').map(s => s.trim()) : [];
       newUser.bio = bio;
       newUser.approved = false; // craftsmen require approval
+      newUser.mtnMoney = mtnMoney || null;       // ✅ save MTN
+      newUser.airtelMoney = airtelMoney || null; // ✅ save Airtel
     } else if (role === 'admin') {
       return res.status(403).send('Cannot register as admin.');
     }
@@ -364,6 +380,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
 // NEW: Route for the payment history page
@@ -382,59 +399,96 @@ app.get('/employer/dashboard', requireAuth, requireRole(['employer']), async (re
   res.render('employer/dashboard', { user: req.user, jobs: userJobs, craftsmen, path: req.path });
 });
 
-// Define a placeholder route for the employer dashboard to handle redirects
-app.get('/employer/dashboard', (req, res) => {
-    res.send('Employer Dashboard. Your report has been submitted successfully.');
-});
+// POST /employer/report-problem
+app.post('/employer/report-problem', requireAuth, requireRole(['employer']), async (req, res) => {
+  try {
+    const { jobId, craftsmanId, reportSubject, reportMessage } = req.body;
 
-// The route to handle the report submission
-app.post('/employer/report-problem', async (req, res) => {
-    try {
-        // Retrieve data from the form body.
-        const { craftsmanName, reportSubject, reportMessage } = req.body;
-        
-        // Basic validation to ensure the fields are not empty.
-        if (!craftsmanName || !reportSubject || !reportMessage) {
-            console.error('Validation Error: All fields are required for the report.');
-            return res.status(400).send('All fields are required.');
-        }
-
-        // Create the report data object.
-        const reportData = {
-            // Placeholder ID for now. In a real app, this would be `req.user.id`.
-            employerId: 'sample-employer-id-123', 
-            craftsmanName,
-            reportSubject,
-            reportMessage,
-            timestamp: new Date()
-        };
-
-        // Add the new report to our in-memory array.
-        app.locals.reports.push(reportData);
-
-        console.log('New report submitted:', reportData);
-
-        // Redirect the user back to their dashboard with a success message.
-        res.redirect('/employer/dashboard?success=report-submitted');
-
-    } catch (error) {
-        console.error('Error submitting report:', error);
-        res.status(500).send('Internal Server Error. Please try again later.');
+    // Validate required fields
+    if (!jobId || !craftsmanId || !reportSubject || !reportMessage) {
+      return res.status(400).send('All fields are required.');
     }
+
+    // Ensure the craftsman exists
+    const craftsman = await User.findById(craftsmanId);
+    if (!craftsman) return res.status(404).send('Craftsman not found.');
+
+    // Save the report
+    await Report.create({
+      fromRole: 'employer',      // ✅ Important!
+      employerId: req.user._id,
+      craftsmanId,
+      jobId,
+      reportSubject,
+      reportMessage
+    });
+
+    res.redirect('/employer/dashboard?success=report-submitted');
+  } catch (err) {
+    console.error('Error submitting employer report:', err);
+    res.status(500).send('Internal Server Error.');
+  }
+});
+
+
+
+// View reports page
+// app.get("/admin/reports", requireAdminPassword, async (req, res) => {
+//   try {
+//     const reports = await Report.find()
+//       .populate("craftsmanId employerId jobId")
+//       .sort({ timestamp: -1 })
+//       .lean();
+
+//     res.render("admin/reports-message", { reports });
+//   } catch (error) {
+//     console.error("Error fetching reports:", error);
+//     res.status(500).send("Server error");
+//   }
+// });
+
+// Delete a report (RESTful, no /delete suffix)
+app.delete("/admin/reports/:id", async (req, res) => {
+  console.log("🚀 DELETE route triggered:", req.method, req.originalUrl);
+
+  try {
+    const deleted = await Report.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting report:", err);
+    res.status(500).json({ success: false, message: "Failed to delete report" });
+  }
+});
+
+
+
+app.get('/admin/reports-message', requireAuth, requireRole(['admin']), async (req, res) => {
+  try {
+    const reports = await Report.find()
+      .populate('employerId', 'name mobile')
+      .populate('craftsmanId', 'name')
+      .populate('jobId', 'title')
+      .sort({ timestamp: -1 })
+      .lean();
+
+    res.render('admin/reports-message', { reports });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // New route for the Admin Reports page
-app.get('/admin/reports-message', (req, res) => {
-    // The path 'admin/reports-message' tells Express to look for the file
-    // at `./views/admin/reports-message.pug`
-    res.render('admin/reports-message', { reports: app.locals.reports });
-});
+// app.get('/admin/reports-message', (req, res) => {
+//     res.render('admin/reports-message', { reports: app.locals.reports });
+// });
 
-// New route for the Admin Reports page
-app.get('/admin/reports-message', (req, res) => {
-    // Pass the reports data from our in-memory array to the Pug template.
-    res.render('admin/reports-message', { reports: app.locals.reports });
-});
+// app.get('/admin/reports-message', (req, res) => {
+//     res.render('admin/reports-message', { reports: app.locals.reports });
+// });
 
 // --- BEGIN CHANGES ---
 
@@ -548,10 +602,29 @@ app.post(
 );
 
 
-app.get('/employer/browse-craftsmen', requireAuth, requireRole(['employer']), async (req, res) => {
-  const craftsmen = await User.find({ role: 'craftsman', approved: true });
-  res.render('employer/browse-craftsmen', { user: req.user, craftsmen, path: req.path });
-});
+// Employer: Browse Craftsmen
+app.get(
+  '/employer/browse-craftsmen',
+  requireAuth,
+  requireRole(['employer']),
+  async (req, res) => {
+    try {
+      const craftsmen = await User.find({ role: 'craftsman', approved: true })
+        .select('name skills rating location experience') // ✅ only needed fields
+        .lean();
+
+      res.render('employer/browse-craftsmen', {
+        user: req.user,
+        craftsmen,
+        path: req.path
+      });
+    } catch (err) {
+      console.error("Error loading craftsmen:", err);
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
+
 
 app.get('/employer/payment-records', requireAuth, requireRole(['employer']), async (req, res) => {
   try {
@@ -644,8 +717,23 @@ app.get('/employer/edit-job/:id', requireAuth, requireRole(['employer']), async 
   }
 });
 
+// GET /employer/job/:jobId/craftsmen
+app.get('/employer/job/:jobId/craftsmen', async (req, res) => {
+  try {
+    const jobId = req.params.jobId;
+    const job = await Job.findById(jobId).populate('assignedCraftsmen'); // make sure your Job schema has assignedCraftsmen field
+    if (!job) return res.status(404).json([]);
 
-// Route to handle the form submission for editing a job
+    // Return only _id and name
+    const craftsmen = job.assignedCraftsmen.map(c => ({ _id: c._id, name: c.name }));
+    res.json(craftsmen);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
+  }
+});
+
+
 // Route for employers to view all job listings (read-only)
 app.get('/employer/all-jobs', requireAuth, requireRole(['employer']), async (req, res) => {
   try {
@@ -791,62 +879,55 @@ app.post('/api/applications/accept/:applicationId', requireAuth, requireRole(['e
     res.status(500).send('Server error');
   }
 });
+
 // --- Route for the payment form page ---
 app.get('/payment/form', requireAuth, requireRole(['employer']), async (req, res) => {
-    const { jobId, craftsmanId } = req.query; // Get both jobId and craftsmanId from the URL
-    console.log('Received jobId:', jobId);
-    console.log('Received craftsmanId:', craftsmanId);
-    try {
-      const job = await Job.findById(jobId).lean();
-      const craftsman = await User.findById(craftsmanId).lean(); // Fetch the craftsman from the database
-      
-      // Check if both job and craftsman were found
-      if (!job || !craftsman) {
-        return res.status(404).send('Job or craftsman not found.');
-      }
-      
-      // Pass both job and craftsman to the Pug template
-      res.render('employer/deposit-form', { 
-        user: req.user, 
-        job, 
-        craftsman, // Now passing the craftsman variable
-        path: req.path, 
-        formatCurrency 
-      });
-    } catch (error) {
-      console.error('Error rendering payment form:', error);
-      res.status(500).send('Internal Server Error');
+  const { jobId, craftsmanId } = req.query; // Get both jobId and craftsmanId from the URL
+  console.log('Received jobId:', jobId);
+  console.log('Received craftsmanId:', craftsmanId);
+
+  try {
+    const job = await Job.findById(jobId).lean();
+    const craftsman = await User.findById(craftsmanId).lean(); // Fetch the craftsman from the database
+    
+    // Check if both job and craftsman were found
+    if (!job || !craftsman) {
+      return res.status(404).send('Job or craftsman not found.');
     }
+
+    // ✅ Decide which mobile number & network to auto-fill
+    let mobileNumber = null;
+    let network = null;
+
+    if (craftsman.mtnMoney) {
+      mobileNumber = craftsman.mtnMoney;
+      network = "MTN";
+    } else if (craftsman.airtelMoney) {
+      mobileNumber = craftsman.airtelMoney;
+      network = "AIRTEL";
+    }
+
+    if (!mobileNumber) {
+      // Either block or show message (your choice)
+      return res.status(400).send("Craftsman has not registered a Mobile Money number.");
+    }
+
+    // Pass everything to the Pug template
+    res.render('employer/deposit-form', { 
+      user: req.user, 
+      job, 
+      craftsman,
+      mobileNumber,   // ✅ now available in the Pug
+      network,        // ✅ now available in the Pug
+      path: req.path, 
+      formatCurrency 
+    });
+  } catch (error) {
+    console.error('Error rendering payment form:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-// --- Route to view the employer's payment history ---
-app.get('/employer/payments', requireAuth, requireRole(['employer']), async (req, res) => {
-    try {
-      // Fetch all transactions for this employer
-      const payments = await Transaction.find({ employerId: req.user._id })
-        .populate({
-          path: 'jobId',
-          select: 'title',
-        })
-        .populate({
-          path: 'craftsmanId',
-          select: 'name mobileNumber',
-        })
-        .sort({ createdAt: -1 })
-        .lean(); // convert Mongoose documents to plain objects
-
-      // Ensure the template always receives an array
-      res.render('employer/payment-history', {
-        user: req.user,
-        payments: payments || [], 
-        path: req.path,
-        formatCurrency
-      });
-    } catch (error) {
-      console.error('Error fetching payment history:', error);
-      res.status(500).send('Internal Server Error');
-    }
-});
 // This route simulates releasing funds from escrow.
 app.post('/api/payment/release/:jobId', requireAuth, requireRole(['employer']), async (req, res) => {
     try {
@@ -1196,8 +1277,13 @@ app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (
       return res.status(404).send("Craftsman not found");
     }
 
+    // Available jobs
     const availableJobs = await Job.find({ status: 'open' }).lean();
-    const myJobs = await Job.find({ craftsmanId: craftsman._id }).lean();
+
+    // My jobs assigned to craftsman, populate employerId for dropdown
+    const myJobs = await Job.find({ craftsmanId: craftsman._id })
+      .populate('employerId', 'name mobile')
+      .lean();
 
     // Compute distance for each available job
     const enrichedJobs = availableJobs.map(job => {
@@ -1216,10 +1302,9 @@ app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (
         return {
           ...job,
           distanceKm,
-          isFar: distanceKm > 50 // threshold in km
+          isFar: distanceKm > 50
         };
       }
-
       return { ...job, distanceKm: null, isFar: false };
     });
 
@@ -1232,6 +1317,89 @@ app.get('/craftsman/dashboard', requireAuth, requireRole(['craftsman']), async (
   } catch (err) {
     console.error("Error loading dashboard:", err);
     res.status(500).send("Internal Server Error");
+  }
+});
+
+// --- POST Craftsman Profile Route ---
+app.post(
+  '/craftsman/profile',
+  requireAuth,
+  requireRole(['craftsman']),
+  multerFields, // ✅ safe now
+  async (req, res) => {
+    try {
+      const updateData = {
+        name: req.body.name,
+        email: req.body.email,
+        mobile: req.body.mobile,
+        location: {
+          city: req.body['location[city]'],
+          region: req.body['location[region]'],
+          district: req.body['location[district]'],
+        },
+        experience: req.body.experience,
+        skills: req.body.skills ? req.body.skills.split(',').map(s => s.trim()) : [],
+        profile: {
+          communication: parseInt(req.body['profile[communication]']) || 0,
+          technicalSkill: parseInt(req.body['profile[technicalSkill]']) || 0,
+          punctuality: parseInt(req.body['profile[punctuality]']) || 0,
+          quality: parseInt(req.body['profile[quality]']) || 0,
+          safety: parseInt(req.body['profile[safety]']) || 0,
+        }
+      };
+
+      // Handle uploaded files
+      if (req.files['profilePicture']) {
+        updateData.profilePicture = '/uploads/' + req.files['profilePicture'][0].filename;
+      }
+      if (req.files['cv']) {
+        updateData.cv = '/uploads/' + req.files['cv'][0].filename;
+      }
+      if (req.files['coverLetter']) {
+        updateData.coverLetter = '/uploads/' + req.files['coverLetter'][0].filename;
+      }
+
+      await User.findByIdAndUpdate(req.user._id, updateData, { new: true });
+      res.redirect('/craftsman/profile');
+    } catch (err) {
+      console.error('Error updating craftsman profile:', err);
+      res.status(500).send('Server error');
+    }
+  }
+);
+
+
+// GET craftsman profile for self (logged-in craftsman)
+app.get('/craftsman/profile', requireAuth, requireRole(['craftsman']), async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).lean(); 
+    if (!user) return res.status(404).send('User not found');
+
+    // Ensure profile object always exists with default 0s
+    const userProfile = {
+      communication: user.profile?.communication || 0,
+      technicalSkill: user.profile?.technicalSkill || 0,
+      punctuality: user.profile?.punctuality || 0,
+      quality: user.profile?.quality || 0,
+      safety: user.profile?.safety || 0
+    };
+
+    const platformAverage = {
+      communication: 75,
+      technicalSkill: 70,
+      punctuality: 80,
+      quality: 75,
+      safety: 85
+    };
+
+    res.render('craftsman/profile', {
+      user: { ...user, profile: userProfile },
+      platformAverage,
+      path: req.path
+    });
+  } catch (err) {
+    console.error('Error fetching craftsman profile:', err);
+    res.status(500).send('Server error');
   }
 });
 
@@ -1331,49 +1499,37 @@ app.post('/rate-craftsman/:id', async (req, res) => {
   }
 });
 
-// Define multerFields for multi-file uploads
-const multerFields = upload.fields([
-  { name: 'profilePicture', maxCount: 1 },
-  { name: 'cv', maxCount: 1 },
-  { name: 'coverLetter', maxCount: 1 }
-]);
-
-// Profile update route
-app.post('/craftsman/profile', requireAuth, multerFields, async (req, res) => {
+// POST /craftsman/report-problem
+app.post('/craftsman/report-problem', requireAuth, requireRole(['craftsman']), async (req, res) => {
   try {
-    const user = req.user;
+    const { jobId, employerId, reportSubject, reportMessage } = req.body;
 
-    // Update basic info
-    user.name = req.body.name;
-    user.email = req.body.email;
-    user.mobile = req.body.mobile;
-    user.experience = parseInt(req.body.experience || 0, 10);
+    if (!jobId || !employerId || !reportSubject || !reportMessage) {
+      return res.status(400).send('All fields are required.');
+    }
 
-    // Update location
-    user.location = req.body.location;
+    // Validate job
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).send('Job not found.');
 
-    // Update skills
-    user.skills = req.body.skills ? req.body.skills.split(',').map(s => s.trim()) : [];
+    // Validate employer
+    const employer = await User.findById(employerId);
+    if (!employer) return res.status(404).send('Employer not found.');
 
-    // Update profile ratings
-    user.profile = {
-      communication: parseInt(req.body.profile.communication || 0, 10),
-      technicalSkill: parseInt(req.body.profile.technicalSkill || req.body.profile.technicalskill || 0, 10),
-      punctuality: parseInt(req.body.profile.punctuality || 0, 10),
-      quality: parseInt(req.body.profile.quality || 0, 10),
-      safety: parseInt(req.body.profile.safety || 0, 10)
-    };
+    const report = new Report({
+      fromRole: 'craftsman',
+      craftsmanId: req.user._id,
+      employerId,
+      jobId,
+      reportSubject,
+      reportMessage
+    });
 
-    // Handle uploaded files
-    if (req.files?.cv?.length) user.cvPath = `/uploads/${req.files.cv[0].filename}`;
-    if (req.files?.coverLetter?.length) user.coverLetterPath = `/uploads/${req.files.coverLetter[0].filename}`;
-    if (req.files?.profilePicture?.length) user.profilePicture = `/uploads/${req.files.profilePicture[0].filename}`;
-
-    await user.save();
-    res.redirect('/craftsman/profile');
+    await report.save();
+    res.redirect('/craftsman/dashboard?success=report-submitted');
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error("Error submitting report:", err);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -1752,30 +1908,42 @@ app.get("/admin/logout", (req, res) => {
   res.redirect("/admin/login");
 });
 
-// Blacklist management routes
-app.get("/admin/blacklist", requireAdminPassword, async (req, res) => {
+app.get('/admin/blacklist', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const blacklist = await Blacklist.find().sort({ addedAt: -1 });
-    res.render("admin/blacklist", { 
-      blacklist, 
-      formatDate: d => new Date(d).toLocaleString() 
+    const blacklistEntries = await Blacklist.find();
+    res.render('admin/blacklist', {
+      blacklist: blacklistEntries,  // pass actual MongoDB data
+      formatDate: (date) => date ? new Date(date).toLocaleString() : 'N/A'
     });
-  } catch (error) {
-    console.error("Error fetching blacklist:", error);
-    res.status(500).send("Server error");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Internal Server Error');
   }
+});
+// Blacklist management routes
+// app.get("/admin/blacklist", requireAdminPassword, async (req, res) => {
+//   try {
+//     const blacklist = await Blacklist.find().sort({ addedAt: -1 });
+//     res.render("admin/blacklist", { 
+//       blacklist, 
+//       formatDate: d => new Date(d).toLocaleString() 
+//     });
+//   } catch (error) {
+//     console.error("Error fetching blacklist:", error);
+//     res.status(500).send("Server error");
+//   }
+// });
+
+// Admin add to blacklist - return JSON for dynamic update
+app.post("/admin/blacklist", requireAdminPassword, async (req, res) => {
+  const { name, mobile, reason } = req.body;
+  if (!name || !mobile || !reason) {
+    return res.status(400).json({ success: false, message: "All fields are required" });
+  }
+  const user = await Blacklist.create({ name, mobile, reason, addedAt: new Date() });
+  res.json({ success: true, user });
 });
 
-app.post("/admin/blacklist", requireAdminPassword, async (req, res) => {
-  try {
-    const { name, mobile, reason } = req.body;
-    await Blacklist.create({ name, mobile, reason });
-    res.redirect("/admin/blacklist");
-  } catch (error) {
-    console.error("Error adding to blacklist:", error);
-    res.status(500).send("Server error");
-  }
-});
 
 app.delete("/admin/blacklist/:id", requireAdminPassword, async (req, res) => {
   try {
@@ -1849,19 +2017,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// app.get('/admin/blacklist', requireAuth, requireAdmin, async (req, res) => {
-//   try {
-//     const blacklistEntries = await Blacklist.find();
-//     res.render('admin/blacklist', {
-//       blacklist: blacklistEntries,  // pass actual MongoDB data
-//       formatDate: (date) => date ? new Date(date).toLocaleString() : 'N/A'
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send('Internal Server Error');
-//   }
-// });
-
 
 // DELETE: Remove a user from blacklist
 // app.delete('/admin/blacklist/:id', async (req, res) => {
@@ -1910,8 +2065,6 @@ app.post('/employer/report-craftsman/:craftsmanId', requireAuth, requireRole(['e
     res.status(500).send('Server error while submitting report');
   }
 });
-
-
 
 // Admin view a specific craftsman's profile
 app.get('/admin/craftsman/:craftsmanId', requireAuth, requireRole(['admin']), async (req, res) => {

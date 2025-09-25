@@ -11,33 +11,28 @@ block content
       // Profile Form Column
       // -------------------------------
       .profile-form-column
-        .profile-header
-          .profile-avatar
-            if user.profilePicture
-              img.profile-img(src=user.profilePicture, alt="Profile Picture")
-            else
-              span.profile-initial #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
+        form.profile-form(action="/craftsman/profile", method="POST", enctype="multipart/form-data")
+          // Hidden file input for profile picture
+          input.form-control(type="file", id="profilePicture", name="profilePicture", accept="image/*", style="display:none")
+          
+          .profile-header
+            .profile-avatar
+              .profile-picture-wrapper
+                if user.profilePicture
+                  img.profile-img(src=user.profilePicture, alt="Profile Picture")
+                else
+                  span.profile-initial #{user.name && user.name.charAt(0) ? user.name.charAt(0) : 'U'}
+                .overlay
+                  i.fa.fa-pencil-alt
 
-        .profile-form-section
-          if user.approved === false
-            .alert.alert-warning
-              p Your profile is **pending admin approval**. You cannot make changes at this time.
-              p.form-note Once approved, you will be able to update your profile again.
+          .profile-form-section
+            if user.approved === false
+              .alert.alert-warning
+                p Your profile is **pending admin approval**. You cannot make changes at this time.
+                p.form-note Once approved, you will be able to update your profile again.
 
-          form.profile-form(action="/craftsman/profile", method="POST", enctype="multipart/form-data")
             fieldset(disabled=user.approved === false)
               
-              // Profile Picture
-              .form-group.profile-picture-upload
-                label(for="profilePicture") Profile Picture
-                .profile-picture-preview
-                  if user.profilePicture
-                    img(src=user.profilePicture, alt="Current Profile Picture")
-                    button.btn.btn-sm.btn-secondary(type="button", onclick="document.getElementById('profilePicture').click()") Edit
-                  else
-                    .placeholder Select Image
-                input.form-control(type="file", id="profilePicture", name="profilePicture", accept="image/*", style="display:none")
-
               // Basic Info
               .form-row
                 .form-group
@@ -72,7 +67,7 @@ block content
                 label(for="skills") Skills (comma-separated)
                 input.form-control(type="text", id="skills", name="skills", value=user.skills ? user.skills.join(', ') : '', placeholder="e.g., Plumbing, Electrical, Carpentry")
 
-              // File Uploads
+              // File Uploads (inside the form)
               .form-group
                 label(for="cv") Upload your CV (PDF only)
                 input.form-control(type="file", id="cv", name="cv", accept="application/pdf")
@@ -112,23 +107,54 @@ block content
                 .legend-color.legend-platform
                 span Platform Average
 
-    // Inline CSS for stars
+    // Inline CSS for stars + avatar
     style.
       .star {
         cursor: pointer;
         font-size: 24px;
-        color: #ccc; /* default gray */
+        color: #ccc;
         transition: color 0.2s;
         display: inline-block;
         margin-right: 2px;
       }
+      .star.selected { color: gold; }
+      .star:hover { color: orange; }
 
-      .star.selected {
-        color: gold; /* highlighted star */
+      .profile-picture-wrapper {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: #f3f3f3;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
       }
-
-      .star:hover {
-        color: orange; /* hover effect */
+      .profile-picture-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .profile-initial {
+        font-size: 40px;
+        color: #555;
+      }
+      .overlay {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        background: rgba(0,0,0,0.5);
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .profile-picture-wrapper:hover .overlay {
+        opacity: 1;
       }
 
 block scripts
@@ -202,22 +228,16 @@ block scripts
       const hiddenInput = container.querySelector('input[type="hidden"]');
       const initialValue = parseInt(hiddenInput.value);
 
-      // Set initial selected stars
       stars.forEach((star, index) => { if(index < initialValue) star.classList.add('selected'); });
 
-      // Add click event
       stars.forEach(star => {
         star.addEventListener('click', e => {
           const value = parseInt(star.dataset.value);
           hiddenInput.value = value;
-
-          // Update star colors
           stars.forEach((s, i) => {
             if(i < value) s.classList.add('selected');
             else s.classList.remove('selected');
           });
-
-          // Update chart
           const skillIndex = skillLabels.findIndex(label => label.toLowerCase().replace(' ', '') === skillName);
           if(skillIndex !== -1) {
             chart.data.datasets[0].data[skillIndex] = value * 20;
@@ -228,22 +248,31 @@ block scripts
     });
 
     // -------------------------------
-    // Profile Picture Preview
+    // Profile Picture Upload + Preview
     // -------------------------------
     const profilePictureInput = document.getElementById('profilePicture');
-    const profilePicturePreview = document.querySelector('.profile-picture-preview');
-    profilePictureInput.addEventListener('change', function() {
-      const file = this.files[0];
-      if(file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          profilePicturePreview.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          profilePicturePreview.appendChild(img);
+    const profilePictureWrapper = document.querySelector('.profile-picture-wrapper');
+
+    if (profilePictureWrapper && profilePictureInput) {
+      profilePictureWrapper.addEventListener('click', () => {
+        profilePictureInput.click();
+      });
+
+      profilePictureInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if(file) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            let img = profilePictureWrapper.querySelector('img');
+            if(!img) {
+              img = document.createElement('img');
+              img.classList.add('profile-img');
+              profilePictureWrapper.innerHTML = '';
+              profilePictureWrapper.appendChild(img);
+            }
+            img.src = e.target.result;
+          }
+          reader.readAsDataURL(file);
         }
-        reader.readAsDataURL(file);
-      } else {
-        profilePicturePreview.innerHTML = `<div class="placeholder">Select Image</div>`;
-      }
-    });
+      });
+    }

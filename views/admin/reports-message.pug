@@ -1,181 +1,351 @@
 extends ../layout
 
 block content
-  .row
-    .col-12
-      h1.mb-4
-        i.bi.bi-flag.me-2
-        | Reports Management
-        span.badge.bg-danger.ms-2 #{reports.filter(r => !r.seen).length} New
+  .container
+    h1.mb-4 Reports Management
+    span.badge.bg-danger.ms-2 #{reports.filter(r => !r.seen).length} New
 
-  .row
-    .col-12
-      .card.shadow-sm
-        .card-header.bg-dark.text-white
-          h5.mb-0
-            i.bi.bi-exclamation-triangle.me-2
-            | User Reports (#{reports.length})
-        .card-body.p-0
-          if reports.length === 0
-            .text-center.py-5
-              i.bi.bi-check-circle.display-1.text-success
-              h4.mt-3 No Reports
-              p.text-muted All reports have been addressed.
-          else
-            .table-responsive
-              table.table.table-hover.mb-0
-                thead.table-dark
-                  tr
-                    th Status
-                    th Subject
-                    th Craftsman
-                    th Employer
-                    th Date
-                    th Actions
-                tbody
-                  each report in reports
-                    tr(class=report.seen ? '' : 'table-warning')
-                      td
-                        if report.seen
-                          span.badge.bg-success
-                            i.bi.bi-eye.me-1
-                            | Seen
-                        else
-                          span.badge.bg-danger
-                            i.bi.bi-eye-slash.me-1
-                            | New
-                      td
-                        strong #{report.reportSubject}
-                      td
-                        if report.craftsmanId && report.craftsmanId.name
-                          a.text-decoration-none(href=`/admin/craftsman/${report.craftsmanId._id}`)
-                            i.bi.bi-person.me-1
-                            | #{report.craftsmanId.name}
-                        else if report.craftsmanName
-                          span.text-muted
-                            i.bi.bi-person.me-1
-                            | #{report.craftsmanName}
-                        else
-                          span.text-muted Unknown
-                      td
-                        if report.employerId
-                          span
-                            i.bi.bi-building.me-1
-                            | #{report.employerId.name}
-                          br
-                          small.text-muted #{report.employerId.mobile}
-                        else
-                          span.text-muted Unknown
-                      td
-                        small.text-muted #{new Date(report.timestamp).toLocaleString()}
-                      td
-                        button.btn.btn-primary.btn-sm.me-2(
-                          data-bs-toggle="modal" 
-                          data-bs-target="#reportModal" 
-                          onclick=`showReportDetails('${report._id}', '${report.reportSubject}', '${report.reportMessage}', '${report.craftsmanName || (report.craftsmanId ? report.craftsmanId.name : 'Unknown')}', '${report.employerId ? report.employerId.name : 'Unknown'}', '${new Date(report.timestamp).toLocaleString()}')`
-                        )
-                          i.bi.bi-eye.me-1
-                          | View
-                        if !report.seen
-                          button.btn.btn-success.btn-sm(onclick=`markAsSeen('${report._id}')`)
-                            i.bi.bi-check.me-1
-                            | Mark Seen
+    if reports.length === 0
+      .text-center.py-5
+        i.bi.bi-check-circle.display-1.text-success
+        h4.mt-3 No Reports
+        p.text-muted All reports have been addressed.
+    else
+      // ============================
+      // Employer → Craftsman Reports
+      // ============================
+      h3.mt-4.text-primary Employer Reports (About Craftsmen)
+      .table-responsive.mb-5
+        table.table.table-striped.table-bordered.align-middle#employer-reports-table
+          thead.table-dark
+            tr
+              th Status
+              th Subject
+              th Craftsman
+              th Employer
+              th Job
+              th Date
+              th Report Message
+              th Actions
+          tbody
+            each report in reports.filter(r => r.fromRole === 'employer')
+              tr(class=report.seen ? '' : 'table-warning' id=`report-${report._id}`)
+                td
+                  if report.seen
+                    span.badge.bg-success Seen
+                  else
+                    span.badge.bg-danger New
+                td= report.reportSubject
+                td
+                  if report.craftsmanId
+                    a(href=`/admin/craftsman/${report.craftsmanId._id}`)= report.craftsmanId.name
+                  else
+                    span.text-muted N/A
+                td
+                  if report.employerId
+                    a(href=`/admin/employer/${report.employerId._id}`)= report.employerId.name
+                    br
+                    small.text-muted= report.employerId.mobile
+                  else
+                    span.text-muted N/A
+                td
+                  if report.jobId
+                    a(href=`/job/${report.jobId._id}`, target="_blank")
+                      strong= report.jobId.title || 'Untitled Job'
+                    br
+                    small.text-muted
+                      | ID: 
+                      a(href=`/job/${report.jobId._id}`, target="_blank")= report.jobId._id
+                  else
+                    span.text-muted N/A
+                td= new Date(report.timestamp).toLocaleString()
+                td= report.reportMessage
+                td
+                  button.btn.btn-danger.btn-sm(
+                    type="button"
+                    data-action="delete-report"
+                    data-id=report._id
+                  ) Delete
 
-  // Report Details Modal
-  .modal.fade#reportModal(tabindex="-1")
-    .modal-dialog.modal-lg
-      .modal-content
-        .modal-header.bg-info.text-white
-          h5.modal-title
-            i.bi.bi-flag.me-2
-            | Report Details
-          button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
-        .modal-body
-          .row
-            .col-md-6
-              h6.text-muted Subject
-              p#modalSubject.fw-bold
-              
-              h6.text-muted.mt-3 Craftsman
-              p#modalCraftsman
-              
-              h6.text-muted.mt-3 Employer
-              p#modalEmployer
-              
-              h6.text-muted.mt-3 Date Reported
-              p#modalDate
-            .col-md-6
-              h6.text-muted Message
-              .border.p-3.bg-light.rounded
-                p#modalMessage.mb-0
-        .modal-footer
-          button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Close
-          button.btn.btn-success#modalMarkSeenBtn(onclick="markAsSeenFromModal()" style="display: none")
-            i.bi.bi-check.me-2
-            | Mark as Seen
+      // =============================
+      // Craftsman → Employer Reports
+      // =============================
+      h3.mt-4.text-success Craftsman Reports (About Employers)
+      .table-responsive
+        table.table.table-striped.table-bordered.align-middle#craftsman-reports-table
+          thead.table-dark
+            tr
+              th Status
+              th Subject
+              th Craftsman
+              th Employer
+              th Job
+              th Date
+              th Report Message
+              th Actions
+          tbody
+            each report in reports.filter(r => r.fromRole === 'craftsman')
+              tr(class=report.seen ? '' : 'table-warning' id=`report-${report._id}`)
+                td
+                  if report.seen
+                    span.badge.bg-success Seen
+                  else
+                    span.badge.bg-danger New
+                td= report.reportSubject
+                td
+                  if report.craftsmanId
+                    a(href=`/admin/craftsman/${report.craftsmanId._id}`)= report.craftsmanId.name
+                  else
+                    span.text-muted N/A
+                td
+                  if report.employerId
+                    a(href=`/admin/employer/${report.employerId._id}`)= report.employerId.name
+                    br
+                    small.text-muted= report.employerId.mobile
+                  else
+                    span.text-muted N/A
+                td
+                  if report.jobId
+                    a(href=`/job/${report.jobId._id}`, target="_blank")
+                      strong= report.jobId.title || 'Untitled Job'
+                    br
+                    small.text-muted
+                      | ID: 
+                      a(href=`/job/${report.jobId._id}`, target="_blank")= report.jobId._id
+                  else
+                    span.text-muted N/A
+                td= new Date(report.timestamp).toLocaleString()
+                td= report.reportMessage
+                td
+                  button.btn.btn-danger.btn-sm(
+                    type="button"
+                    data-action="delete-report"
+                    data-id=report._id
+                  ) Delete
 
+block scripts
   script.
-    let currentReportId = null;
-    
-    function showReportDetails(id, subject, message, craftsman, employer, date) {
-      currentReportId = id;
-      document.getElementById('modalSubject').textContent = subject;
-      document.getElementById('modalMessage').textContent = message;
-      document.getElementById('modalCraftsman').textContent = craftsman;
-      document.getElementById('modalEmployer').textContent = employer;
-      document.getElementById('modalDate').textContent = date;
-      
-      // Show/hide mark as seen button based on current status
-      const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
-      const isUnseen = row && row.classList.contains('table-warning');
-      const markSeenBtn = document.getElementById('modalMarkSeenBtn');
-      if (isUnseen) {
-        markSeenBtn.style.display = 'inline-block';
-      } else {
-        markSeenBtn.style.display = 'none';
-      }
-    }
-    
-    function markAsSeen(id) {
-      fetch(`/admin/reports/${id}/seen`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
+    console.log("✅ reports-message.pug JS loaded");
+
+    // Shared delete button handler
+    document.addEventListener('click', async function(e) {
+      const btn = e.target.closest('button[data-action="delete-report"]');
+      if (!btn) return;
+
+      const id = btn.dataset.id;
+      if (!confirm("Are you sure you want to delete this report?")) return;
+
+      try {
+        const res = await fetch(`/admin/reports/${id}`, {
+          method: 'DELETE',
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin"
+        });
+
+        const data = await res.json();
         if (data.success) {
-          // Update the row appearance
-          const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
-          if (row) {
-            row.classList.remove('table-warning');
-            // Update status badge
-            const statusCell = row.cells[0];
-            statusCell.innerHTML = '<span class="badge bg-success"><i class="bi bi-eye me-1"></i>Seen</span>';
-            // Remove mark seen button
-            const markSeenBtn = row.querySelector('button.btn-success');
-            if (markSeenBtn) markSeenBtn.remove();
-          }
-          
-          // Update badge count
-          location.reload();
+          alert("✅ Report deleted successfully.");
+          const row = document.getElementById(`report-${id}`);
+          if (row) row.remove();
+        } else {
+          alert("❌ Failed to delete report.");
         }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error marking report as seen');
-      });
-    }
-    
-    function markAsSeenFromModal() {
-      if (currentReportId) {
-        markAsSeen(currentReportId);
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
-        modal.hide();
+      } catch (err) {
+        console.error("🚨 Error deleting report:", err);
+        alert("⚠️ Network error.");
       }
-    }
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+//- extends ../layout
+
+//- block content
+//-   .row
+//-     .col-12
+//-       h1.mb-4
+//-         i.bi.bi-flag.me-2
+//-         | Reports Management
+//-         span.badge.bg-danger.ms-2 #{reports.filter(r => !r.seen).length} New
+
+//-   .row
+//-     .col-12
+//-       .card.shadow-sm
+//-         .card-header.bg-dark.text-white
+//-           h5.mb-0
+//-             i.bi.bi-exclamation-triangle.me-2
+//-             | User Reports (#{reports.length})
+//-         .card-body.p-0
+//-           if reports.length === 0
+//-             .text-center.py-5
+//-               i.bi.bi-check-circle.display-1.text-success
+//-               h4.mt-3 No Reports
+//-               p.text-muted All reports have been addressed.
+//-           else
+//-             .table-responsive
+//-               table.table.table-hover.mb-0
+//-                 thead.table-dark
+//-                   tr
+//-                     th Status
+//-                     th Subject
+//-                     th Craftsman
+//-                     th Employer
+//-                     th Date
+//-                     th Actions
+//-                 tbody
+//-                   each report in reports
+//-                     tr(class=report.seen ? '' : 'table-warning')
+//-                       td
+//-                         if report.seen
+//-                           span.badge.bg-success
+//-                             i.bi.bi-eye.me-1
+//-                             | Seen
+//-                         else
+//-                           span.badge.bg-danger
+//-                             i.bi.bi-eye-slash.me-1
+//-                             | New
+//-                       td
+//-                         strong #{report.reportSubject}
+//-                       td
+//-                         if report.craftsmanId && report.craftsmanId.name
+//-                           a.text-decoration-none(href=`/admin/craftsman/${report.craftsmanId._id}`)
+//-                             i.bi.bi-person.me-1
+//-                             | #{report.craftsmanId.name}
+//-                         else if report.craftsmanName
+//-                           span.text-muted
+//-                             i.bi.bi-person.me-1
+//-                             | #{report.craftsmanName}
+//-                         else
+//-                           span.text-muted Unknown
+//-                       td
+//-                         if report.employerId
+//-                           span
+//-                             i.bi.bi-building.me-1
+//-                             | #{report.employerId.name}
+//-                           br
+//-                           small.text-muted #{report.employerId.mobile}
+//-                         else
+//-                           span.text-muted Unknown
+//-                       td
+//-                         small.text-muted #{new Date(report.timestamp).toLocaleString()}
+//-                       td
+//-                         button.btn.btn-primary.btn-sm.me-2(
+//-                           data-bs-toggle="modal" 
+//-                           data-bs-target="#reportModal" 
+//-                           onclick=`showReportDetails('${report._id}', '${report.reportSubject}', '${report.reportMessage}', '${report.craftsmanName || (report.craftsmanId ? report.craftsmanId.name : 'Unknown')}', '${report.employerId ? report.employerId.name : 'Unknown'}', '${new Date(report.timestamp).toLocaleString()}')`
+//-                         )
+//-                           i.bi.bi-eye.me-1
+//-                           | View
+//-                         if !report.seen
+//-                           button.btn.btn-success.btn-sm(onclick=`markAsSeen('${report._id}')`)
+//-                             i.bi.bi-check.me-1
+//-                             | Mark Seen
+
+//-   // Report Details Modal
+//-   .modal.fade#reportModal(tabindex="-1")
+//-     .modal-dialog.modal-lg
+//-       .modal-content
+//-         .modal-header.bg-info.text-white
+//-           h5.modal-title
+//-             i.bi.bi-flag.me-2
+//-             | Report Details
+//-           button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
+//-         .modal-body
+//-           .row
+//-             .col-md-6
+//-               h6.text-muted Subject
+//-               p#modalSubject.fw-bold
+              
+//-               h6.text-muted.mt-3 Craftsman
+//-               p#modalCraftsman
+              
+//-               h6.text-muted.mt-3 Employer
+//-               p#modalEmployer
+              
+//-               h6.text-muted.mt-3 Date Reported
+//-               p#modalDate
+//-             .col-md-6
+//-               h6.text-muted Message
+//-               .border.p-3.bg-light.rounded
+//-                 p#modalMessage.mb-0
+//-         .modal-footer
+//-           button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Close
+//-           button.btn.btn-success#modalMarkSeenBtn(onclick="markAsSeenFromModal()" style="display: none")
+//-             i.bi.bi-check.me-2
+//-             | Mark as Seen
+
+//-   script.
+//-     let currentReportId = null;
+    
+//-     function showReportDetails(id, subject, message, craftsman, employer, date) {
+//-       currentReportId = id;
+//-       document.getElementById('modalSubject').textContent = subject;
+//-       document.getElementById('modalMessage').textContent = message;
+//-       document.getElementById('modalCraftsman').textContent = craftsman;
+//-       document.getElementById('modalEmployer').textContent = employer;
+//-       document.getElementById('modalDate').textContent = date;
+      
+//-       // Show/hide mark as seen button based on current status
+//-       const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
+//-       const isUnseen = row && row.classList.contains('table-warning');
+//-       const markSeenBtn = document.getElementById('modalMarkSeenBtn');
+//-       if (isUnseen) {
+//-         markSeenBtn.style.display = 'inline-block';
+//-       } else {
+//-         markSeenBtn.style.display = 'none';
+//-       }
+//-     }
+    
+//-     function markAsSeen(id) {
+//-       fetch(`/admin/reports/${id}/seen`, {
+//-         method: 'POST',
+//-         headers: {
+//-           'Content-Type': 'application/json'
+//-         }
+//-       })
+//-       .then(response => response.json())
+//-       .then(data => {
+//-         if (data.success) {
+//-           // Update the row appearance
+//-           const row = document.querySelector(`tr:has(button[onclick*="${id}"])`);
+//-           if (row) {
+//-             row.classList.remove('table-warning');
+//-             // Update status badge
+//-             const statusCell = row.cells[0];
+//-             statusCell.innerHTML = '<span class="badge bg-success"><i class="bi bi-eye me-1"></i>Seen</span>';
+//-             // Remove mark seen button
+//-             const markSeenBtn = row.querySelector('button.btn-success');
+//-             if (markSeenBtn) markSeenBtn.remove();
+//-           }
+          
+//-           // Update badge count
+//-           location.reload();
+//-         }
+//-       })
+//-       .catch(error => {
+//-         console.error('Error:', error);
+//-         alert('Error marking report as seen');
+//-       });
+//-     }
+    
+//-     function markAsSeenFromModal() {
+//-       if (currentReportId) {
+//-         markAsSeen(currentReportId);
+//-         // Close modal
+//-         const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+//-         modal.hide();
+//-       }
+//-     }
 
 
 

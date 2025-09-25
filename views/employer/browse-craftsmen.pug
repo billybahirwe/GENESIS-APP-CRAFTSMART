@@ -27,25 +27,37 @@ block content
           input.form-control(type="text", id="location-filter", placeholder="Enter location", oninput="filterCraftsmen()")
     
     .craftsmen-grid(id="craftsmen-grid")
-      each craftsman in craftsmen
-        .craftsman-card(data-skills=craftsman.skills && craftsman.skills.length ? craftsman.skills.join(',') : '', data-rating=craftsman.rating, data-location=craftsman.location)
-          .craftsman-header
-            .craftsman-avatar
-              span= craftsman.name.charAt(0)
-            .craftsman-info
-              h3.craftsman-name= craftsman.name
-              .craftsman-rating
-                span.stars ⭐ #{craftsman.rating || 'New'}
-              p.craftsman-location 📍 #{craftsman.location}
-          .craftsman-skills
-            if craftsman.skills && craftsman.skills.length
-              each skill in craftsman.skills
-                span.skill-tag= skill
-          .craftsman-meta
-            p.craftsman-experience #{craftsman.experience} years experience
-          .craftsman-actions
-            button.btn.btn-primary.btn-sm Contact
-            button.btn.btn-secondary.btn-sm View Profile
+      if craftsmen.length > 0
+        each craftsman in craftsmen
+          .craftsman-card(
+            data-skills=craftsman.skills && craftsman.skills.length ? craftsman.skills.join(',') : '',
+            data-rating=craftsman.rating,
+            data-location=craftsman.location || ''
+          )
+            .craftsman-header
+              .craftsman-avatar
+                span= craftsman.name ? craftsman.name.charAt(0).toUpperCase() : '?'
+              .craftsman-info
+                h3.craftsman-name= craftsman.name
+                .craftsman-rating
+                  span.stars ⭐ #{craftsman.rating || 'New'}
+                if craftsman.location
+                  p.craftsman-location 📍 #{craftsman.location}
+            .craftsman-skills
+              if craftsman.skills && craftsman.skills.length
+                each skill in craftsman.skills
+                  span.skill-tag= skill
+            .craftsman-meta
+              if craftsman.experience
+                p.craftsman-experience #{craftsman.experience} years experience
+            .craftsman-actions
+              a.btn.btn-primary.btn-sm(href=`/employer/message/${craftsman._id}`) Contact
+              a.btn.btn-secondary.btn-sm(href=`/craftsman/${craftsman._id}`) View Profile
+      else
+        .empty-state
+          .empty-icon 👷
+          h3 No Craftsmen Found
+          p Try adjusting your filters or check back later.
 
 block scripts
   script.
@@ -55,11 +67,12 @@ block scripts
       const locationFilter = document.getElementById('location-filter').value.toLowerCase();
       
       const cards = document.querySelectorAll('.craftsman-card');
+      let visibleCount = 0;
       
       cards.forEach(card => {
-        const skills = card.dataset.skills;
+        const skills = card.dataset.skills || "";
         const rating = parseFloat(card.dataset.rating) || 0;
-        const location = card.dataset.location.toLowerCase();
+        const location = (card.dataset.location || "").toLowerCase();
         
         let show = true;
         
@@ -76,5 +89,18 @@ block scripts
         }
         
         card.style.display = show ? 'block' : 'none';
+        if (show) visibleCount++;
       });
+
+      // Show "No results" message if nothing is visible
+      const grid = document.getElementById('craftsmen-grid');
+      let emptyState = document.getElementById('no-results');
+      if (!emptyState) {
+        emptyState = document.createElement('div');
+        emptyState.id = 'no-results';
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = '<div class="empty-icon">👷</div><h3>No matching craftsmen</h3><p>Try changing your filters.</p>';
+        grid.appendChild(emptyState);
+      }
+      emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
     }

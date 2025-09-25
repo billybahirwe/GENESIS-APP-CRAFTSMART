@@ -18,10 +18,11 @@ block content
             label(for="email") Email Address
             input.form-control(type="email", id="email", name="email", required, placeholder="Enter your email")
 
+        // ✅ Corrected mobile field
         .form-row
           .form-col
-            label(for="mobile") Mobile Number
-            input.form-control(type="tel", id="mobile", name="mobile", required, placeholder="Enter your mobile number")
+            label(for="mobile") Contact Number (normal calls)
+            input.form-control(type="tel", id="mobile", name="mobile", required, placeholder="Enter your main contact number")
 
           .form-col
             label(for="password") Password
@@ -29,7 +30,7 @@ block content
               input.form-control(type="password", id="password", name="password", required, placeholder="Choose a secure password")
               i.toggle-password.far.fa-eye
 
-        // ✅ Confirm Password field added
+        // ✅ Confirm Password
         .form-row
           .form-col
             label(for="confirmPassword") Confirm Password
@@ -86,6 +87,16 @@ block content
             label(for='skills' class='block mb-1 font-semibold') Skills (comma-separated)
             input#skills(type='text', name='skills', placeholder='e.g. plumbing, carpentry', class='form-control')
 
+          // ✅ Airtel & MTN Mobile Money Numbers BEFORE Bio
+          .form-group
+            label(for='airtelMoney' class='block mb-1 font-semibold') Airtel Money Number (optional)
+            input#airtelMoney(type='tel', name='airtelMoney', placeholder='Enter Airtel Money number', class='form-control')
+
+          .form-group
+            label(for='mtnMoney' class='block mb-1 font-semibold') MTN Mobile Money Number (optional)
+            input#mtnMoney(type='tel', name='mtnMoney', placeholder='Enter MTN Mobile Money number', class='form-control')
+
+          // ✅ Bio now last field
           .form-group
             label(for='bio' class='block mb-1 font-semibold') Bio
             textarea#bio(name='bio', rows='7', class='form-control')

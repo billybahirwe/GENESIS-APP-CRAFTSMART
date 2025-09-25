@@ -1,6 +1,4 @@
-//- This Pug template creates the main admin payments list page.
-//- It displays a table of all transactions with their status and details.
-
+//- views/admin/dashboard-payment.pug
 extends ../layout
 
 block append head
@@ -8,7 +6,7 @@ block append head
   link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css")
   // Font Awesome for icons
   link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css")
-  
+
   style.
     .gradient-bg {
       background: linear-gradient(to right, #2563EB, #6366F1);
@@ -22,30 +20,11 @@ block append head
       font-weight: 600;
       text-transform: uppercase;
     }
-    .status-badge.bg-green-100 {
-      background-color: #d1fae5;
-      color: #065f46;
-    }
-    .status-badge.bg-red-100 {
-      background-color: #fee2e2;
-      color: #991b1b;
-    }
-    .status-badge.bg-yellow-100 {
-      background-color: #fef3c7;
-      color: #92400e;
-    }
-    .status-badge.bg-blue-100 {
-      background-color: #dbeafe;
-      color: #1e40af;
-    }
-    .status-badge.bg-gray-100 {
-      background-color: #f3f4f6;
-      color: #374151;
-    }
-
-//- Utility function to format currency
-mixin formatCurrency(amount)
-  | {{ amount.toLocaleString('en-UG', { style: 'currency', currency: 'UGX' }) }}
+    .status-badge.bg-green-100 { background-color: #d1fae5; color: #065f46; }
+    .status-badge.bg-red-100 { background-color: #fee2e2; color: #991b1b; }
+    .status-badge.bg-yellow-100 { background-color: #fef3c7; color: #92400e; }
+    .status-badge.bg-blue-100 { background-color: #dbeafe; color: #1e40af; }
+    .status-badge.bg-gray-100 { background-color: #f3f4f6; color: #374151; }
 
 block content
   .min-h-screen.bg-gray-100.py-8.px-4
@@ -56,8 +35,9 @@ block content
           div(class="flex flex-col sm:flex-row items-center justify-between")
             h1(class="text-2xl font-bold mb-2 sm:mb-0") Payment Transactions
             .text-right
-              p.text-blue-100 Manage all your payments
-              p.text-xs.text-blue-200.mt-1 Data as of #{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              p(class="text-blue-100") Manage all your payments
+              p(class="text-xs text-blue-200 mt-1") 
+                | Data as of #{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 
         // Transaction List
         .p-6.overflow-x-auto
@@ -71,13 +51,14 @@ block content
                       th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Amount
                       th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Status
                       th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Initiated
-                      th.relative.px-6.py-3
-                        span.sr-only Actions
                   tbody.bg-white.divide-y.divide-gray-200
                     each transaction in transactions
+                      - var caseId = transaction.case_id || 'N/A'
+                      - var createdDate = transaction.created_at ? new Date(transaction.created_at) : null
+                      - var formattedDate = (createdDate && !isNaN(createdDate.getTime())) ? createdDate.toLocaleString('en-UG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : 'N/A'
                       tr
-                        td.px-6.py-4.whitespace-nowrap.text-sm.font-medium.text-gray-900 ##{transaction.case_id}
-                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500= formatCurrency(transaction.total_amount)
+                        td.px-6.py-4.whitespace-nowrap.text-sm.font-medium.text-gray-900 #{caseId}
+                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500 UGX #{transaction.total_amount ? transaction.total_amount.toLocaleString('en-UG') : 'N/A'}
                         td.px-6.py-4.whitespace-nowrap.text-sm
                           case transaction.status
                             when 'PENDING'
@@ -110,17 +91,23 @@ block content
                                 | Disbursement Failed
                             default
                               .status-badge.bg-gray-100.text-gray-800= transaction.status
-                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500= new Date(transaction.created_at).toLocaleDateString()
-                        td.px-6.py-4.whitespace-nowrap.text-right.text-sm.font-medium
-                          //- This is the new, working button approach
-                          a(
-                            href=`/admin/payments/${transaction.transaction_id}`,
-                            class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-200"
-                          ) View
+                        td.px-6.py-4.whitespace-nowrap.text-sm.text-gray-500 #{formattedDate}
           else
             .text-center.p-8.text-gray-500
               p.text-lg.font-semibold No payments found.
               p.text-sm Start processing new payments to see them here.
 
 block scripts
-  //- Any client-side scripts for this page would go here.
+  script.
+    // Helper function to format currency safely
+    function formatCurrency(amount) {
+      if (!amount && amount !== 0) return 'N/A';
+      return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
+    }
+
+    // Helper function to format date safely
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return !isNaN(date.getTime()) ? date.toLocaleString('en-UG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : 'N/A';
+    }

@@ -12,6 +12,10 @@ const userSchema = new mongoose.Schema({
   },
   approved: { type: Boolean, default: false },
 
+  // 💰 Mobile Money Numbers (Craftsman-specific, optional)
+  mtnMoney: { type: String, default: null },
+  airtelMoney: { type: String, default: null },
+
   // 🗺️ Structured location
   location: {
     region: { type: String },
@@ -58,7 +62,7 @@ const userSchema = new mongoose.Schema({
   ],
 
   // 💰 Optional: platform balance for admin (derived from transactions)
-  balance: { type: Number, default: 0 }, 
+  balance: { type: Number, default: 0 },
 });
 
 // Geospatial index for distance queries

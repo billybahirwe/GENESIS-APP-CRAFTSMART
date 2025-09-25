@@ -15,7 +15,7 @@ block content
         strong Craftsman:
         | #{craftsman.name}
     
-    // ✅ New notification for the system fee
+    // ✅ System fee info
     .alert.alert-info.mt-3
       p.mb-0 A 10% system fee (UGX #{(job.budget * 0.10).toLocaleString('en-UG', { useGrouping: true })}) will be applied.
       p.mb-0 The craftsman will receive a net amount of <strong>UGX #{(job.budget * 0.90).toLocaleString('en-UG', { useGrouping: true })}</strong> upon job completion.
@@ -23,29 +23,25 @@ block content
     if message
       .alert.alert-danger #{message}
 
-    // 👇 Form no longer posts via fetch; Socket.IO handles payment
     form#paymentForm
       input(type='hidden' name='jobId' value=job._id)
       input(type='hidden' name='amount' value=job.budget)
       input(type='hidden' name='craftsmanId' value=craftsman._id)
 
+      // ✅ Craftsman’s number auto-filled by backend
       .form-group
-        label(for="network") Choose Mobile Money Network
-        select#network.form-control(name="network" required)
-          option(value="") Select Network
-          option(value="MTN") MTN
-          option(value="AIRTEL") Airtel
-
-      .form-group
-        label(for='mobile_number') Your Mobile Money Number
+        label(for='mobile_number') Craftsman’s Mobile Money Number
         input.form-control(
-          type='tel' 
-          id='mobile_number' 
-          name='mobile_number' 
-          placeholder='e.g., 07XXXXXXXX' 
-          required
+          type='tel'
+          id='mobile_number'
+          name='mobile_number'
+          value=mobileNumber
+          readonly
         )
-      
+
+      // ✅ Network passed automatically
+      input(type='hidden' id='network' name='network' value=network)
+
       button.btn.btn-primary(type='submit') Pay UGX #{job.budget}
 
     .form-links
@@ -55,8 +51,6 @@ block content
   script(src="/socket.io/socket.io.js")
   script.
     const socket = io();
-
-    // Optionally join a private room using user ID
     socket.emit("join", "#{user._id}");
 
     document.getElementById("paymentForm").addEventListener("submit", function(e) {
@@ -65,26 +59,25 @@ block content
       const jobId = this.jobId.value;
       const amount = this.amount.value;
       const mobile_number = this.mobile_number.value;
-      
-      // ✅ Calculate the fee and the craftsman's portion
+      const network = this.network.value;
+
       const fee = amount * 0.10;
       const craftsmanAmount = amount * 0.90;
 
-      // ✅ Emit Socket.IO event to initiate payment with the new amounts
       socket.emit("initiatePayment", {
         jobId,
         amount,
         mobile_number,
+        network,
         userId: "#{user._id}",
         fee,
         craftsmanAmount
       });
     });
 
-    // Listen for the payment link from the server
     socket.on("paymentLink", (data) => {
       if (data.success && data.link) {
-        window.location.href = data.link; // auto redirect to Flutterwave
+        window.location.href = data.link;
       } else {
         alert(data.message || "Payment initiation failed");
         console.error(data);
